@@ -1,0 +1,30 @@
+﻿<div class="flex items-center justify-between w-full py-3 cursor-pointer group" @onclick="Toggle">
+
+    <div class="flex flex-col ml-4">
+        <span class="text-sm font-bold text-lajevard dark:text-white transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">@Label</span>
+        @if (!string.IsNullOrEmpty(Description))
+        {
+            <span class="text-xs text-lajevard/50 dark:text-white/50 mt-1">@Description</span>
+        }
+    </div>
+
+    <!-- بدنه دکمه -->
+    <div class="relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-300 ease-in-out border-2 border-transparent @(Value ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10")">
+        <!-- دکمه دایره‌ای سفید (در حالت RTL وقتی روشن است، به سمت چپ यानी منفی حرکت می‌کند) -->
+        <span class="inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out @(Value ? "-translate-x-5" : "translate-x-0")"></span>
+    </div>
+
+</div>
+
+@code {
+    [Parameter] public bool Value { get; set; }
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "گزینه";
+    [Parameter] public string? Description { get; set; }
+
+    private async Task Toggle()
+    {
+        Value = !Value;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

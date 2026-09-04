@@ -1,0 +1,159 @@
+﻿@using System.IO
+@using Microsoft.AspNetCore.Components.Forms
+@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+@inject ToastService ToastService
+<!-- 👆 دقت کنید: نام YourAppName را به نام پروژه خودتان تغییر دهید -->
+
+<div class="w-full text-lajevard dark:text-white">
+
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <div class="flex items-center justify-between mb-3 ml-1">
+            <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80">@Label</label>
+            <span class="text-xs text-lajevard/50 dark:text-white/50">حداکثر @MaxAllowedFiles فایل</span>
+        </div>
+    }
+
+    <!-- منطقه Drag & Drop و آپلود -->
+    <div class="relative w-full rounded-[2rem] border-2 border-dashed border-blue-600/30 dark:border-white/20 bg-blue-50/50 dark:bg-sormee-light/50 hover:bg-blue-50 dark:hover:bg-white/10 transition-colors flex flex-col items-center justify-center p-8 group overflow-hidden">
+
+        <!-- InputFile مخفی روی کل کادر برای قابلیت کلیک و درگ -->
+        <InputFile OnChange="LoadFiles"
+                   multiple
+                   accept="image/*,video/*"
+                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+
+        <div class="w-16 h-16 mb-4 rounded-full bg-white dark:bg-sormee flex items-center justify-center text-blue-600 shadow-md group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-300">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        </div>
+
+        <h4 class="font-bold text-base text-lajevard dark:text-white mb-1">برای آپلود کلیک کنید</h4>
+        <p class="text-xs text-lajevard/60 dark:text-white/60 text-center">یا فایل‌ها را بکشید و اینجا رها کنید (تصویر و ویدیو)</p>
+    </div>
+
+    <!-- گالری پیش‌نمایش فایل‌ها -->
+    @if (mediaFiles.Any())
+    {
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6 animate-fade-in">
+            @foreach (var file in mediaFiles)
+            {
+                <div class="relative group aspect-square rounded-[1.25rem] overflow-hidden border border-blue-600/10 dark:border-white/10 shadow-sm bg-kahgel dark:bg-sormee-light">
+
+                    @if (file.IsVideo)
+                    {
+                        <!-- نمای ویدیو -->
+                        <div class="w-full h-full flex flex-col items-center justify-center bg-blue-600/5 text-blue-600 dark:text-blue-400 p-2">
+                            <svg class="w-10 h-10 mb-2 opacity-80" fill="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z" /><path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v14a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h8v14H5V5z" clip-rule="evenodd" /></svg>
+                            <span class="text-[10px] font-medium text-center line-clamp-2 leading-tight px-1" dir="ltr">@file.File.Name</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- نمای عکس -->
+                        <img src="@file.PreviewUrl" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="preview" />
+                    }
+
+                    <!-- هاله تاریک روی عکس هنگام هاور (برای بهتر دیده شدن دکمه حذف) -->
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                    <!-- دکمه حذف -->
+                    <button type="button" @onclick="() => RemoveFile(file)" class="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-xl shadow-lg opacity-0 group-hover:opacity-100 hover:bg-red-600 active:scale-95 transition-all duration-300 z-20">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+
+                    <!-- سایز فایل -->
+                    <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
+                        <div class="text-[10px] font-bold text-white tracking-wider" dir="ltr">
+                            @(Math.Round(file.File.Size / 1024.0 / 1024.0, 2)) MB
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "تصاویر و ویدیوهای ملک";
+    [Parameter] public int MaxAllowedFiles { get; set; } = 10;
+    [Parameter] public long MaxFileSizeMb { get; set; } = 15; // حداکثر 15 مگابایت
+
+    // این رویداد را به بیرون می‌فرستیم تا در فرم اصلی فایل‌ها را برای سرور بفرستید
+    [Parameter] public EventCallback<List<IBrowserFile>> OnFilesChanged { get; set; }
+
+    private List<MediaItem> mediaFiles = new();
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        var maxAllowedSize = MaxFileSizeMb * 1024 * 1024;
+        bool hasError = false;
+
+        foreach (var file in e.GetMultipleFiles(MaxAllowedFiles))
+        {
+            if (mediaFiles.Count >= MaxAllowedFiles)
+            {
+                ToastService.ShowWarning($"شما نمی‌توانید بیشتر از {MaxAllowedFiles} فایل انتخاب کنید.");
+                break;
+            }
+
+            if (file.Size > maxAllowedSize)
+            {
+                ToastService.ShowError($"فایل {file.Name} بزرگتر از حد مجاز ({MaxFileSizeMb}MB) است.");
+                hasError = true;
+                continue;
+            }
+
+            var isVideo = file.ContentType.StartsWith("video/");
+            string previewUrl = "";
+
+            if (!isVideo)
+            {
+                try
+                {
+                    // گرفتن یک نسخه سبک و کوچک از عکس برای پیش‌نمایش در مرورگر (بدون فشار به رم)
+                    var resizedImage = await file.RequestImageFileAsync("image/jpeg", 400, 400);
+                    using var stream = resizedImage.OpenReadStream(maxAllowedSize);
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+
+                    var base64 = Convert.ToBase64String(ms.ToArray());
+                    previewUrl = $"data:image/jpeg;base64,{base64}";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error creating preview: {ex.Message}");
+                }
+            }
+
+            mediaFiles.Add(new MediaItem
+            {
+                File = file,
+                PreviewUrl = previewUrl,
+                IsVideo = isVideo
+            });
+        }
+
+        if (!hasError && e.FileCount > 0)
+        {
+            ToastService.ShowSuccess("فایل‌ها با موفقیت اضافه شدند.");
+        }
+
+        // فرستادن لیست نهایی به فرم والد
+        await OnFilesChanged.InvokeAsync(mediaFiles.Select(m => m.File).ToList());
+    }
+
+    private async Task RemoveFile(MediaItem item)
+    {
+        mediaFiles.Remove(item);
+        await OnFilesChanged.InvokeAsync(mediaFiles.Select(m => m.File).ToList());
+    }
+
+    // مدل نگهداری اطلاعات هر فایل در UI
+    public class MediaItem
+    {
+        public IBrowserFile File { get; set; }
+        public string PreviewUrl { get; set; }
+        public bool IsVideo { get; set; }
+    }
+}

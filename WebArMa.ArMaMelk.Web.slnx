@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Core/">
+    <Project Path="WebArMa.ArMaMelk.Web.Application/WebArMa.ArMaMelk.Web.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/Presentation/">
+    <Project Path="WebArMa.ArMaMelk.Web.EndPoint/WebArMa.ArMaMelk.Web.EndPoint.csproj" />
+  </Folder>
+</Solution>

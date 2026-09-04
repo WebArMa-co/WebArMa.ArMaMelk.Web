@@ -1,0 +1,122 @@
+﻿@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
+    /* تغییر جادویی: رنگ فیروزه‌ای به آبی سلطنتی (Blue-600) تغییر کرد */
+    /* با این کار تمام کامپوننت‌های قبلی به صورت خودکار آبی می‌شوند */
+    --color-firoozeh: #2563EB;
+    --color-lajevard: #1A365D;
+    --color-zaferan: #E76F51;
+    --color-kahgel: #FDFBF7;
+    --color-kashi: #F0F9F8;
+    --color-sormee: #0B192C;
+    --color-sormee-light: #152A4A;
+}
+
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 
+  پترن پس‌زمینه: 
+  کد رنگ به #2563EB15 (آبی با ۱۵٪ شفافیت) تغییر کرد تا با منوها هماهنگ شود
+*/
+.bg-persian-pattern {
+    background-color: var(--color-kahgel);
+    background-image: radial-gradient(#2563EB15 1px, transparent 1px), radial-gradient(#2563EB15 1px, var(--color-kahgel) 1px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+}
+
+.dark .bg-persian-pattern {
+    background-color: var(--color-sormee);
+    background-image: radial-gradient(#2563EB10 1px, transparent 1px), radial-gradient(#2563EB10 1px, var(--color-sormee) 1px);
+}
+
+html {
+    transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/******* SearchableDropdown Start *******/
+/* استایل اسکرول‌بار سفارشی و ظریف */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-firoozeh); /* حالا این اسکرول‌بار به زیبایی آبی می‌شود */
+    border-radius: 10px;
+    opacity: 0.5;
+}
+/******* SearchableDropdown End *******/
+
+/******* AppModal Start *******/
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-slide-up {
+    animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-up {
+    animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.25s ease-out forwards;
+}
+/******* AppModal End *******/
+/******* AppToast Start *******/
+
+@keyframes slideDownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.animate-slide-down-fade {
+    animation: slideDownFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/******* AppToast End *******/

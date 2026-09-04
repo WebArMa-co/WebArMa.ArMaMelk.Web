@@ -1,0 +1,60 @@
+﻿<div class="h-full flex flex-col p-5 bg-transparent relative z-10">
+
+    <!-- Logo Area -->
+    <div class="flex items-center gap-4 px-2 mb-8 mt-2 shrink-0">
+        <!-- لوگو با رنگ متن منطبق بر برند (blue-600) روی بک‌گراند سفید/شیشه‌ای -->
+        <div class="w-12 h-12 bg-white/95 text-blue-600 rounded-[1.25rem] flex items-center justify-center font-bold text-2xl shadow-lg shadow-black/10">
+            🏠
+        </div>
+        <div>
+            <h1 class="font-bold text-xl text-white leading-tight">املاک من</h1>
+            <p class="text-sm text-white/70 mt-0.5">پنل مشاورین</p>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="flex flex-col gap-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+
+        <NavLink href="/" Match="NavLinkMatch.All"
+                 class="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-white/70 border border-transparent hover:bg-white/10 hover:text-white active:scale-[0.98] transition-all duration-200
+            [&.active]:bg-white/20 [&.active]:border-white/30 [&.active]:backdrop-blur-sm [&.active]:text-white [&.active]:font-bold [&.active]:shadow-lg [&.active]:shadow-black/10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            داشبورد
+        </NavLink>
+
+        <NavLink href="/Folders"
+                 class="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-white/70 border border-transparent hover:bg-white/10 hover:text-white active:scale-[0.98] transition-all duration-200
+            [&.active]:bg-white/20 [&.active]:border-white/30 [&.active]:backdrop-blur-sm [&.active]:text-white [&.active]:font-bold [&.active]:shadow-lg [&.active]:shadow-black/10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+            مدیریت فایل‌ها
+        </NavLink>
+
+        <NavLink href="/Properties"
+                 class="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-white/70 border border-transparent hover:bg-white/10 hover:text-white active:scale-[0.98] transition-all duration-200
+            [&.active]:bg-white/20 [&.active]:border-white/30 [&.active]:backdrop-blur-sm [&.active]:text-white [&.active]:font-bold [&.active]:shadow-lg [&.active]:shadow-black/10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+            مدیریت فایل‌ها
+        </NavLink>
+
+        <NavLink href="/reminders"
+                 class="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-white/70 border border-transparent hover:bg-white/10 hover:text-white active:scale-[0.98] transition-all duration-200
+            [&.active]:bg-white/20 [&.active]:border-white/30 [&.active]:backdrop-blur-sm [&.active]:text-white [&.active]:font-bold [&.active]:shadow-lg [&.active]:shadow-black/10 justify-between">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                یادآوری‌ها
+            </div>
+            <!-- نشانگر نوتیفیکیشن -->
+            <span class="bg-zaferan text-white shadow-sm text-xs font-bold px-2.5 py-1 rounded-full border border-white/10">۳</span>
+        </NavLink>
+    </nav>
+
+    <!-- Bottom Section -->
+    <div class="mt-4 pt-4 border-t border-white/15 shrink-0">
+        <NavLink href="/profile"
+                 class="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-white/70 border border-transparent hover:bg-white/10 hover:text-white active:scale-[0.98] transition-all duration-200
+            [&.active]:bg-white/20 [&.active]:border-white/30 [&.active]:backdrop-blur-sm [&.active]:text-white [&.active]:font-bold [&.active]:shadow-lg [&.active]:shadow-black/10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            تنظیمات
+        </NavLink>
+    </div>
+</div>

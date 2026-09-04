@@ -1,0 +1,62 @@
+﻿@using WebArMa.ArMaMelk.Web.Application.Toast.Enums
+@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+
+@inject ToastService ToastService
+@implements IDisposable
+
+<!-- z-[9999] تا همیشه روی تمام مودال‌ها و منوها باشد -->
+<div class="fixed top-5 sm:top-8 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] sm:w-auto sm:min-w-[320px] pointer-events-none">
+
+    @foreach (var toast in ToastService.Toasts)
+    {
+        <div @key="toast.Id" class="pointer-events-auto flex items-center justify-between gap-3 p-4 bg-white/95 dark:bg-sormee-light/95 backdrop-blur-2xl border border-blue-600/10 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-black/60 rounded-[1.25rem] animate-slide-down-fade">
+
+            <div class="flex items-center gap-3">
+                <!-- آیکون و رنگ بر اساس نوع پیام -->
+                @if (toast.Level == ToastLevel.Success)
+                {
+                    <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                }
+                else if (toast.Level == ToastLevel.Error)
+                {
+                    <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </div>
+                }
+                else if (toast.Level == ToastLevel.Info)
+                {
+                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                }
+
+                <span class="font-bold text-sm text-lajevard dark:text-white leading-tight">
+                    @toast.Message
+                </span>
+            </div>
+
+            <!-- دکمه بستن دستی -->
+            <button type="button" @onclick="() => ToastService.RemoveToast(toast)" class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-lajevard/40 dark:text-white/40 transition-colors shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+        </div>
+    }
+
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // گوش دادن به تغییرات سرویس برای آپدیت شدن صفحه
+        ToastService.OnChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        // جلوگیری از نشت حافظه (Memory Leak)
+        ToastService.OnChanged -= StateHasChanged;
+    }
+}

@@ -1,0 +1,199 @@
+﻿<div class="relative w-full text-lajevard dark:text-white" id="timepicker-@Id">
+
+    <!-- دکمه اصلی باز کردن تایم‌پیکر -->
+    <button type="button" @onclick="Toggle"
+            class="w-full flex items-center justify-between bg-white dark:bg-sormee-light rounded-[1.25rem] px-4 py-3.5 text-sm shadow-[0_4px_15px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300 border border-blue-600/10 dark:border-white/5 focus:ring-2 focus:ring-blue-600/30">
+
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-lajevard/40 dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span class="@(Value.HasValue ? "font-bold text-lg tracking-widest" : "text-lajevard/50 dark:text-white/50") pt-0.5" dir="ltr">
+                @(Value.HasValue ? $"{Value.Value.Hours:00}:{Value.Value.Minutes:00}" : Placeholder)
+            </span>
+        </div>
+
+        @if (Value.HasValue)
+        {
+            <div @onclick:stopPropagation="true" @onclick="Clear" class="p-1 hover:bg-zaferan/10 rounded-full text-lajevard/40 hover:text-zaferan transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </div>
+        }
+    </button>
+
+    @if (isOpen)
+    {
+        <!-- کانتینر تمام صفحه با z-index بالاتر از مودال (70) -->
+        <div class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+
+            <div class="absolute inset-0 bg-lajevard/20 dark:bg-black/40 backdrop-blur-sm transition-opacity animate-fade-in" @onclick="Close"></div>
+
+            <!-- پاپ‌آپ ساعت در وسط صفحه -->
+            <div class="relative w-64 bg-white/95 dark:bg-sormee-light/95 backdrop-blur-xl border border-blue-600/10 dark:border-white/5 rounded-[2rem] shadow-[0_20px_60px_rgb(0,0,0,0.15)] dark:shadow-black/60 p-6 animate-scale-up z-10 flex flex-col items-center">
+
+                <h4 class="text-sm font-bold text-lajevard/60 dark:text-white/60 mb-6">تنظیم ساعت</h4>
+
+                <div class="flex items-center justify-center gap-6" dir="ltr">
+
+                    <!-- تنظیم ساعت -->
+                    <div class="flex flex-col items-center">
+                        <button type="button" @onclick="() => AdjustHour(1)" class="p-3 rounded-2xl bg-kahgel dark:bg-sormee hover:bg-blue-600/10 dark:hover:bg-blue-600/20 text-blue-600 transition-colors active:scale-95 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path></svg>
+                        </button>
+
+                        <div class="text-3xl font-bold text-lajevard dark:text-white my-4 w-12 text-center">
+                            @(CurrentHour.ToString("00"))
+                        </div>
+
+                        <button type="button" @onclick="() => AdjustHour(-1)" class="p-3 rounded-2xl bg-kahgel dark:bg-sormee hover:bg-blue-600/10 dark:hover:bg-blue-600/20 text-blue-600 transition-colors active:scale-95 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="text-3xl font-bold text-lajevard/30 dark:text-white/30 mb-2">:</div>
+
+                    <!-- تنظیم دقیقه -->
+                    <div class="flex flex-col items-center">
+                        <button type="button" @onclick="() => AdjustMinute(5)" class="p-3 rounded-2xl bg-kahgel dark:bg-sormee hover:bg-blue-600/10 dark:hover:bg-blue-600/20 text-blue-600 transition-colors active:scale-95 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path></svg>
+                        </button>
+
+                        <div class="text-3xl font-bold text-lajevard dark:text-white my-4 w-12 text-center">
+                            @(CurrentMinute.ToString("00"))
+                        </div>
+
+                        <button type="button" @onclick="() => AdjustMinute(-5)" class="p-3 rounded-2xl bg-kahgel dark:bg-sormee hover:bg-blue-600/10 dark:hover:bg-blue-600/20 text-blue-600 transition-colors active:scale-95 shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- دکمه‌های فوتر ساعت -->
+                <div class="w-full flex gap-2 mt-8">
+                    <button type="button" @onclick="Close" class="px-4 py-3 rounded-xl text-sm font-medium bg-kahgel dark:bg-sormee text-lajevard/70 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                        انصراف
+                    </button>
+
+                    <!-- اصلاح بزرگ در اینجا: رنگ هگزادسیمال حذف شد و blue-700 برای hover قرار گرفت -->
+                    <button type="button" @onclick="Confirm" class="flex-1 py-3 bg-blue-600 text-white rounded-[1rem] text-sm font-bold shadow-md shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 transition-all">
+                        تایید زمان
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public TimeSpan? Value { get; set; }
+    [Parameter] public EventCallback<TimeSpan?> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "ساعت بازدید";
+
+    [Parameter] public int MinHour { get; set; } = 0;
+    [Parameter] public int MinMinute { get; set; } = 0;
+    [Parameter] public int MaxHour { get; set; } = 23;
+    [Parameter] public int MaxMinute { get; set; } = 59;
+
+    private string Id = Guid.NewGuid().ToString("N");
+    private bool isOpen = false;
+
+    private int CurrentHour = 10;
+    private int CurrentMinute = 0;
+
+    protected override void OnInitialized()
+    {
+        if (Value.HasValue)
+        {
+            CurrentHour = Value.Value.Hours;
+            CurrentMinute = Value.Value.Minutes;
+        }
+        else
+        {
+            CurrentHour = MinHour;
+            CurrentMinute = MinMinute;
+        }
+    }
+
+    private void Toggle()
+    {
+        isOpen = !isOpen;
+        if (isOpen && Value.HasValue)
+        {
+            CurrentHour = Value.Value.Hours;
+            CurrentMinute = Value.Value.Minutes;
+        }
+    }
+
+    private void Close() => isOpen = false;
+
+    private async Task Clear()
+    {
+        Value = null;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private void AdjustHour(int step)
+    {
+        CurrentHour += step;
+
+        if (CurrentHour > MaxHour) CurrentHour = MinHour;
+        if (CurrentHour < MinHour) CurrentHour = MaxHour;
+
+        ValidateTimeBounds();
+    }
+
+    private void AdjustMinute(int step)
+    {
+        CurrentMinute += step;
+
+        if (CurrentMinute > 59)
+        {
+            CurrentMinute = 0;
+            if (CurrentHour < MaxHour) CurrentHour++;
+        }
+        else if (CurrentMinute < 0)
+        {
+            CurrentMinute = 55;
+            if (CurrentHour > MinHour) CurrentHour--;
+        }
+
+        ValidateTimeBounds();
+    }
+
+    private void ValidateTimeBounds()
+    {
+        if (CurrentHour < MinHour)
+        {
+            CurrentHour = MinHour;
+            CurrentMinute = Math.Max(CurrentMinute, MinMinute);
+        }
+        else if (CurrentHour == MinHour && CurrentMinute < MinMinute)
+        {
+            CurrentMinute = MinMinute;
+        }
+
+        if (CurrentHour > MaxHour)
+        {
+            CurrentHour = MaxHour;
+            CurrentMinute = Math.Min(CurrentMinute, MaxMinute);
+        }
+        else if (CurrentHour == MaxHour && CurrentMinute > MaxMinute)
+        {
+            CurrentMinute = MaxMinute;
+        }
+    }
+
+    private async Task Confirm()
+    {
+        var selectedSpan = new TimeSpan(CurrentHour, CurrentMinute, 0);
+
+        var minSpan = new TimeSpan(MinHour, MinMinute, 0);
+        var maxSpan = new TimeSpan(MaxHour, MaxMinute, 0);
+
+        if (selectedSpan < minSpan) selectedSpan = minSpan;
+        if (selectedSpan > maxSpan) selectedSpan = maxSpan;
+
+        Value = selectedSpan;
+        await ValueChanged.InvokeAsync(Value);
+        isOpen = false;
+    }
+}

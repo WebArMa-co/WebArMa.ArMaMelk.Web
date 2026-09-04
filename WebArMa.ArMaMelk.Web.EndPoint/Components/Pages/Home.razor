@@ -1,0 +1,270 @@
+﻿@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+
+@page "/"
+
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<div class="w-full max-w-6xl mx-auto p-4 md:p-6 pb-36 space-y-6">
+
+    <!-- هدر داشبورد و سلام روزانه -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-l from-blue-600 to-indigo-700 text-white p-6 rounded-[2.5rem] shadow-lg shadow-blue-600/20 relative overflow-hidden">
+        <div class="relative z-10 space-y-1">
+            <span class="text-xs font-bold text-blue-200 block">مرکز فرماندهی مشاور املاک</span>
+            <h1 class="text-2xl font-black">روز بخیر، آرش عزیز 👋</h1>
+            <p class="text-xs text-blue-100/80">امروز @todayReminders.Count(r => !r.IsDone) قرار کاری انجام‌نشده در برنامه دارید.</p>
+        </div>
+
+        <div class="flex items-center gap-2 relative z-10">
+            <button type="button"
+                    @onclick='() => Navigation.NavigateTo("/add-property")'
+                    class="px-4 py-3 bg-white text-blue-600 rounded-2xl text-xs font-black shadow-md hover:bg-blue-50 transition-all active:scale-95 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                ثبت فایل جدید
+            </button>
+            <button type="button"
+                    @onclick='() => Navigation.NavigateTo("/reminders")'
+                    class="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 rounded-2xl text-xs font-bold transition-all active:scale-95">
+                برنامه کاری
+            </button>
+        </div>
+
+        <!-- پترن دکوراتیو پس‌زمینه -->
+        <div class="absolute -left-10 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+    </div>
+
+    <!-- کارت‌های آمار و ارقام کلیدی (KPIs) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div class="bg-white dark:bg-sormee-light p-4 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-white/5 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+                📁
+            </div>
+            <div>
+                <span class="text-[11px] text-lajevard/50 dark:text-white/50 block">کل فایل‌های فعال</span>
+                <span class="text-lg font-black text-lajevard dark:text-white">۱۴۸ ملک</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-sormee-light p-4 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-white/5 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+                ⏰
+            </div>
+            <div>
+                <span class="text-[11px] text-lajevard/50 dark:text-white/50 block">قرارهای امروز</span>
+                <span class="text-lg font-black text-amber-600">@todayReminders.Count مورد</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-sormee-light p-4 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-white/5 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
+                🤝
+            </div>
+            <div>
+                <span class="text-[11px] text-lajevard/50 dark:text-white/50 block">نشست‌های قطعی</span>
+                <span class="text-lg font-black text-emerald-600">۳ قرارداد</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-sormee-light p-4 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-white/5 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg">
+                💰
+            </div>
+            <div>
+                <span class="text-[11px] text-lajevard/50 dark:text-white/50 block">ارزش کل فایلینگ</span>
+                <span class="text-lg font-black text-purple-600">۱۸۰ میلیارد</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ردیف دو ستونه: قرارهای امروز + پوشه‌های محبوب -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+        <!-- قرارهای کاری امروز (Today's Agenda) -->
+        <div class="md:col-span-7 bg-white dark:bg-sormee-light p-5 md:p-6 rounded-[2rem] border border-blue-600/10 dark:border-white/5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📅</span>
+                    <h3 class="font-bold text-sm text-lajevard dark:text-white">برنامه کاری امروز</h3>
+                </div>
+                <button type="button" @onclick='() => Navigation.NavigateTo("/reminders")' class="text-xs text-blue-600 font-bold hover:underline">
+                    مشاهده تقویم کامل ➔
+                </button>
+            </div>
+
+            <div class="space-y-2.5">
+                @foreach (var task in todayReminders)
+                {
+                    <div class="p-3 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center justify-between gap-3 @(task.IsDone ? "opacity-50 bg-gray-50/60 dark:bg-white/5" : "bg-gray-50/30 dark:bg-white/5")">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <button type="button"
+                                    @onclick="() => task.IsDone = !task.IsDone"
+                                    class="w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all @(task.IsDone ? "bg-emerald-500 border-emerald-500 text-white" : "border-gray-300 dark:border-white/20")">
+                                @if (task.IsDone)
+                                {
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                }
+                            </button>
+                            <div class="truncate">
+                                <h4 class="text-xs font-bold text-lajevard dark:text-white truncate @(task.IsDone ? "line-through" : "")">@task.Title</h4>
+                                <span class="text-[10px] text-lajevard/50 dark:text-white/50">طرف حساب: @task.ContactPerson</span>
+                            </div>
+                        </div>
+
+                        <span class="text-[11px] font-black text-blue-600 dark:text-blue-400 shrink-0" dir="ltr">
+                            @task.Time
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- دسترسی سریع به پوشه‌های فایلینگ -->
+        <div class="md:col-span-5 bg-white dark:bg-sormee-light p-5 md:p-6 rounded-[2rem] border border-blue-600/10 dark:border-white/5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🗂️</span>
+                    <h3 class="font-bold text-sm text-lajevard dark:text-white">دسته‌بندی‌ها و پوشه‌ها</h3>
+                </div>
+                <button type="button" @onclick='() => Navigation.NavigateTo("/folders")' class="text-xs text-blue-600 font-bold hover:underline">
+                    همه پوشه‌ها ➔
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+                @foreach (var f in quickFolders)
+                {
+                    <div @onclick="() => NavigateToFolder(f.Id)" class="p-3 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 hover:border-blue-500/30 cursor-pointer transition-all flex items-center gap-2.5 group">
+                        <span class="text-xl group-hover:scale-110 transition-transform">@f.IconEmoji</span>
+                        <div class="truncate">
+                            <h4 class="text-xs font-bold text-lajevard dark:text-white group-hover:text-blue-600 truncate">@f.Name</h4>
+                            <span class="text-[10px] text-lajevard/50 dark:text-white/50">@f.FileCount فایل</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+
+    <!-- آخرین فایل‌های ثبت شده -->
+    <div class="bg-white dark:bg-sormee-light p-5 md:p-6 rounded-[2rem] border border-blue-600/10 dark:border-white/5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">✨</span>
+                <h3 class="font-bold text-sm text-lajevard dark:text-white">جدیدترین فایل‌های ثبت‌شده</h3>
+            </div>
+            <button type="button" @onclick='() => Navigation.NavigateTo("/all-properties")' class="text-xs text-blue-600 font-bold hover:underline">
+                جستجو در کل فایل‌ها (@recentProperties.Count) ➔
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            @foreach (var p in recentProperties)
+            {
+                <div @onclick="() => NavigateToProperty(p.Id)" class="p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/30 dark:bg-white/5 hover:shadow-md cursor-pointer transition-all space-y-3 group">
+                    <div class="w-full h-36 rounded-xl overflow-hidden relative bg-gray-100">
+                        <img src="@p.ImageUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="@p.Title" />
+                        <span class="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">کد @p.Code</span>
+                        <span class="absolute top-2 left-2 text-[10px] font-black px-2 py-0.5 rounded-lg @(p.DealType == "فروش" ? "bg-emerald-500 text-white" : "bg-blue-600 text-white")">@p.DealType</span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <h4 class="text-xs font-bold text-lajevard dark:text-white line-clamp-1 group-hover:text-blue-600">@p.Title</h4>
+                        <p class="text-[11px] text-lajevard/60 dark:text-white/60 truncate">@p.Location</p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/5 text-xs">
+                        <span class="text-[10px] text-lajevard/50 dark:text-white/50">@p.Area متر • @p.Rooms خواب</span>
+                        <span class="font-bold text-blue-600 dark:text-blue-400" dir="ltr">@p.PriceFormatted تومان</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+<FabSpeedDial OnActionSelected="HandleFabAction" />
+
+@code {
+    public class AgendaTask
+    {
+        public string Title { get; set; } = "";
+        public string ContactPerson { get; set; } = "";
+        public string Time { get; set; } = "";
+        public bool IsDone { get; set; }
+    }
+
+    public class FolderShortcut
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string IconEmoji { get; set; } = "📁";
+        public int FileCount { get; set; }
+    }
+
+    public class PropertyCard
+    {
+        public string Id { get; set; } = "";
+        public string Code { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string DealType { get; set; } = "فروش";
+        public int Area { get; set; }
+        public int Rooms { get; set; }
+        public long RawPrice { get; set; }
+        public string PriceFormatted => RawPrice.ToString("N0");
+        public string ImageUrl { get; set; } = "";
+    }
+
+    private List<AgendaTask> todayReminders = new()
+    {
+        new AgendaTask { Title = "بازدید آپارتمان ۱۲۵ متری", ContactPerson = "مهندس کاظمی", Time = "11:30", IsDone = false },
+        new AgendaTask { Title = "نشست قرارداد فروش اداری", ContactPerson = "حاج آقا رضایی", Time = "17:00", IsDone = false },
+        new AgendaTask { Title = "تماس با مالک پنت‌هاوس", ContactPerson = "آقای تهرانی", Time = "19:15", IsDone = true }
+    };
+
+    private List<FolderShortcut> quickFolders = new()
+    {
+        new FolderShortcut { Id = "f-residential", Name = "املاک مسکونی", IconEmoji = "🏡", FileCount = 64 },
+        new FolderShortcut { Id = "f-commercial", Name = "اداری و تجاری", IconEmoji = "🏢", FileCount = 32 },
+        new FolderShortcut { Id = "f-north", Name = "فایل‌های شمال", IconEmoji = "⭐", FileCount = 18 },
+        new FolderShortcut { Id = "f-villas", Name = "ویلاهای لوکس", IconEmoji = "🔑", FileCount = 12 }
+    };
+
+    private List<PropertyCard> recentProperties = new()
+    {
+        new PropertyCard { Id = "1", Code = "1045", Title = "آپارتمان نوساز کلید نخورده", Location = "تهران، سعادت‌آباد", DealType = "فروش", Area = 125, Rooms = 2, RawPrice = 14500000000, ImageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80" },
+        new PropertyCard { Id = "2", Code = "1046", Title = "پنت‌هاوس دید ابدی", Location = "تهران، فرشته", DealType = "فروش", Area = 380, Rooms = 4, RawPrice = 75000000000, ImageUrl = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=400&q=80" },
+        new PropertyCard { Id = "3", Code = "1047", Title = "واحد اداری موقعیت برتر", Location = "تهران، میرداماد", DealType = "اجاره", Area = 95, Rooms = 1, RawPrice = 1200000000, ImageUrl = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=400&q=80" }
+    };
+
+    private void NavigateToFolder(string folderId)
+    {
+        Navigation.NavigateTo($"/folders/{folderId}");
+    }
+
+    private void NavigateToProperty(string propId)
+    {
+        Navigation.NavigateTo($"/property/{propId}");
+    }
+
+    private void HandleFabAction(FabSpeedDial.FabAction action)
+    {
+        switch (action)
+        {
+            case FabSpeedDial.FabAction.NewProperty:
+                ToastService.ShowInfo("در حال باز کردن فرم ثبت ملک...");
+                // NavigationManager.NavigateTo("/add-property");
+                break;
+
+            case FabSpeedDial.FabAction.NewReminder:
+                ToastService.ShowSuccess("تقویم یادآوری‌ها باز شد.");
+                break;
+
+            case FabSpeedDial.FabAction.NewRequest:
+                ToastService.ShowInfo("فرم ثبت تقاضای مشتری باز شد.");
+                break;
+        }
+    }
+}

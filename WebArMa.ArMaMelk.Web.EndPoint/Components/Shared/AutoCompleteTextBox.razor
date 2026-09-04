@@ -1,0 +1,173 @@
+﻿@using System.Timers
+@implements IDisposable
+@typeparam TItem
+
+<div class="relative w-full text-lajevard dark:text-white" id="autocomplete-@Id">
+
+    <!-- باکس جستجو -->
+    <div class="relative">
+        <!-- آیکون جستجو (سمت راست) -->
+        <svg class="absolute right-4 top-3.5 w-5 h-5 text-lajevard/40 dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+
+        <input type="text"
+               value="@Value"
+               @oninput="OnInputChanged"
+               @onfocus="OnFocus"
+               placeholder="@Placeholder"
+               autocomplete="off"
+               class="w-full bg-white dark:bg-sormee-light rounded-[1.25rem] pr-11 pl-11 py-3.5 text-sm shadow-[0_4px_15px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.04)] dark:shadow-none border border-firoozeh/10 dark:border-white/5 outline-none focus:ring-2 focus:ring-firoozeh/30 transition-all text-lajevard dark:text-white placeholder-lajevard/40 dark:placeholder-white/40" />
+
+        <!-- آیکون لودینگ یا دکمه پاک کردن (سمت چپ) -->
+        @if (isLoading)
+        {
+            <svg class="absolute left-4 top-3.5 w-5 h-5 text-firoozeh animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        }
+        else if (!string.IsNullOrEmpty(Value))
+        {
+            <button type="button" @onclick="Clear" class="absolute left-4 top-3.5 text-lajevard/40 dark:text-white/40 hover:text-zaferan transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        }
+    </div>
+
+    <!-- لیست پیشنهادات (Dropdown) -->
+    @if (isOpen && suggestions != null && suggestions.Any())
+    {
+        <!-- لایه نامرئی برای بستن با کلیک بیرون -->
+        <div class="fixed inset-0 z-40" @onclick="Close"></div>
+
+        <div class="absolute z-50 w-full mt-2 bg-white/95 dark:bg-sormee-light/95 backdrop-blur-xl border border-firoozeh/10 dark:border-white/5 rounded-[1.5rem] shadow-[0_20px_40px_rgb(0,0,0,0.08)] dark:shadow-black/40 p-2 overflow-hidden transition-all duration-300 animate-slide-up">
+            <ul class="max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                @foreach (var item in suggestions)
+                {
+                    <li @onclick="() => SelectItem(item)"
+                        class="flex flex-col px-3 py-2.5 mb-1 rounded-xl cursor-pointer text-sm transition-colors duration-200 hover:bg-kahgel dark:hover:bg-sormee text-lajevard/80 dark:text-white/80">
+
+                        <!-- امکان رندر کردن UI سفارشی برای هر آیتم (مثلاً عکس + متن) -->
+                        @if (ItemTemplate != null)
+                        {
+                            @ItemTemplate(item)
+                        }
+                        else
+                        {
+                            <span class="truncate font-medium">@TextSelector(item)</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    // مقدار متنی که در تکست‌باکس تایپ می‌شود
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    // تابعی که برای جستجو به دیتابیس متصل می‌شود
+    [Parameter] public Func<string, Task<IEnumerable<TItem>>> SearchMethod { get; set; } = default!;
+
+    // استخراج متن برای زمانی که قالب سفارشی نداریم
+    [Parameter] public Func<TItem, string> TextSelector { get; set; } = default!;
+
+    // قالب سفارشی برای نمایش آیتم‌ها در لیست
+    [Parameter] public RenderFragment<TItem>? ItemTemplate { get; set; }
+
+    // رویدادی که هنگام کلیک روی یک پیشنهاد فراخوانی می‌شود
+    [Parameter] public EventCallback<TItem> OnItemSelected { get; set; }
+
+    [Parameter] public string Placeholder { get; set; } = "جستجو...";
+    [Parameter] public int DebounceDelay { get; set; } = 400; // تاخیر ۴۰۰ میلی‌ثانیه برای تایپ
+
+    private string Id = Guid.NewGuid().ToString("N");
+    private bool isOpen = false;
+    private bool isLoading = false;
+    private IEnumerable<TItem>? suggestions;
+    private Timer? debounceTimer;
+
+    protected override void OnInitialized()
+    {
+        debounceTimer = new Timer(DebounceDelay);
+        debounceTimer.AutoReset = false;
+        debounceTimer.Elapsed += async (s, e) => await PerformSearch();
+    }
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString() ?? "";
+        ValueChanged.InvokeAsync(Value);
+
+        if (string.IsNullOrWhiteSpace(Value))
+        {
+            suggestions = null;
+            isOpen = false;
+            return;
+        }
+
+        // ری‌استارت کردن تایمر با هر تایپ جدید
+        debounceTimer?.Stop();
+        debounceTimer?.Start();
+    }
+
+    private async Task PerformSearch()
+    {
+        if (SearchMethod == null || string.IsNullOrWhiteSpace(Value)) return;
+
+        await InvokeAsync(() =>
+        {
+            isLoading = true;
+            StateHasChanged();
+        });
+
+        // فراخوانی متد جستجوی دیتابیس
+        var results = await SearchMethod.Invoke(Value);
+
+        await InvokeAsync(() =>
+        {
+            suggestions = results;
+            isOpen = suggestions.Any();
+            isLoading = false;
+            StateHasChanged();
+        });
+    }
+
+    private void OnFocus()
+    {
+        if (suggestions != null && suggestions.Any() && !string.IsNullOrWhiteSpace(Value))
+        {
+            isOpen = true;
+        }
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        // وقتی کاربر یک پیشنهاد را انتخاب می‌کند، متن آن در باکس قرار می‌گیرد
+        Value = TextSelector(item);
+        await ValueChanged.InvokeAsync(Value);
+
+        // ارسال شیء کامل به فرم (برای استفاده از ID یا سایر اطلاعات)
+        await OnItemSelected.InvokeAsync(item);
+
+        isOpen = false;
+    }
+
+    private async Task Clear()
+    {
+        Value = "";
+        suggestions = null;
+        isOpen = false;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private void Close() => isOpen = false;
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}

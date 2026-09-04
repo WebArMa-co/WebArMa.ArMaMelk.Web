@@ -1,0 +1,77 @@
+﻿<div class="flex items-center justify-between w-full py-3">
+
+    <!-- بخش عنوان و توضیحات -->
+    <div class="flex flex-col ml-4">
+        <span class="text-sm font-bold text-lajevard dark:text-white">@Label</span>
+        @if (!string.IsNullOrEmpty(Description))
+        {
+            <span class="text-[10px] text-lajevard/50 dark:text-white/50 mt-0.5">@Description</span>
+        }
+    </div>
+
+    <!-- کانتینر دکمه‌ها (طراحی حبابی به سبک iOS) -->
+    <div class="flex items-center bg-gray-100/80 dark:bg-white/5 rounded-2xl p-1 shadow-inner border border-gray-200/50 dark:border-white/5">
+
+        <!-- دکمه کاهش (-) -->
+        <button type="button"
+                @onclick="Decrement"
+                disabled="@(Value <= Min)"
+                class="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-sormee-light text-lajevard dark:text-white shadow-sm disabled:opacity-40 disabled:shadow-none hover:bg-gray-50 dark:hover:bg-sormee active:scale-90 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path>
+            </svg>
+        </button>
+
+        <!-- نمایش مقدار عدد -->
+        <!-- اگر صفر باشد رنگش کم‌رنگ‌تر می‌شود، اگر بیشتر باشد آبی و بولد می‌شود -->
+        <div class="w-12 text-center font-black text-lg transition-colors duration-300 @(Value == 0 ? "text-lajevard/40 dark:text-white/40" : "text-blue-600 dark:text-blue-400")">
+            @(Value == 0 && !string.IsNullOrEmpty(ZeroText) ? ZeroText : Value.ToString())
+        </div>
+
+        <!-- دکمه افزایش (+) -->
+        <button type="button"
+                @onclick="Increment"
+                disabled="@(Value >= Max)"
+                class="w-9 h-9 flex items-center justify-center rounded-xl bg-white dark:bg-sormee-light text-lajevard dark:text-white shadow-sm disabled:opacity-40 disabled:shadow-none hover:bg-gray-50 dark:hover:bg-sormee active:scale-90 transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+            </svg>
+        </button>
+
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "تعداد";
+    [Parameter] public string Description { get; set; } = "";
+
+    // متنی که در صورت 0 بودن نمایش داده می‌شود (مثل "ندارد")
+    [Parameter] public string ZeroText { get; set; } = "";
+
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+
+    [Parameter] public int Min { get; set; } = 0;
+    [Parameter] public int Max { get; set; } = 10;
+    [Parameter] public int Step { get; set; } = 1;
+
+    private async Task Increment()
+    {
+        if (Value < Max)
+        {
+            Value += Step;
+            if (Value > Max) Value = Max;
+            await ValueChanged.InvokeAsync(Value);
+        }
+    }
+
+    private async Task Decrement()
+    {
+        if (Value > Min)
+        {
+            Value -= Step;
+            if (Value < Min) Value = Min;
+            await ValueChanged.InvokeAsync(Value);
+        }
+    }
+}

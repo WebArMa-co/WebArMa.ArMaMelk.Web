@@ -1,0 +1,74 @@
+﻿@if (IsOpen)
+{
+    <!-- کانتینر اصلی تمام‌صفحه با z-index بسیار بالا -->
+    <div class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+
+        <!-- لایه پس‌زمینه (Backdrop) تاریک و شیشه‌ای -->
+        <div class="absolute inset-0 bg-lajevard/40 dark:bg-black/60 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
+             @onclick="OnBackdropClick"></div>
+
+        <!-- بدنه مودال (در موبایل پایین صفحه، در دسکتاپ وسط صفحه) -->
+        <!-- استفاده از pb-safe برای جلوگیری از تداخل با خط پایین آیفون -->
+        <div class="relative w-full sm:max-w-lg bg-white dark:bg-sormee-light rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-[0_-10px_40px_rgb(0,0,0,0.1)] sm:shadow-[0_20px_60px_rgb(0,0,0,0.15)] dark:shadow-black/60 border-t sm:border border-firoozeh/10 dark:border-white/5 overflow-hidden transition-all duration-300 animate-slide-up sm:animate-scale-up max-h-[90vh] flex flex-col pb-safe">
+
+            <!-- خط کشویی هندسی iOS (Pill) - فقط در موبایل -->
+            <div class="w-full flex justify-center pt-3 pb-1 sm:hidden shrink-0 absolute top-0 left-0 right-0 z-10 cursor-pointer" @onclick="Close">
+                <div class="w-12 h-1.5 bg-lajevard/20 dark:bg-white/20 rounded-full"></div>
+            </div>
+
+            <!-- هدر مودال -->
+            <div class="flex items-center justify-between px-6 pt-8 sm:pt-6 pb-4 border-b border-lajevard/5 dark:border-white/5 shrink-0 z-10">
+                <h3 class="font-bold text-lg text-lajevard dark:text-white">
+                    @Title
+                </h3>
+
+                <!-- دکمه بستن با پس‌زمینه گرد (مثل استایل جدید اپل) -->
+                <button type="button" @onclick="Close"
+                        class="p-2 -mr-2 rounded-full bg-kahgel/80 dark:bg-sormee/80 hover:bg-kahgel dark:hover:bg-sormee text-lajevard/60 dark:text-white/60 hover:text-zaferan dark:hover:text-zaferan transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- محتوای داخلی (Scrollable) -->
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 text-lajevard/80 dark:text-white/80">
+                @ChildContent
+            </div>
+
+            <!-- فوتر دکمه‌ها -->
+            @if (Footer != null)
+            {
+                <div class="px-6 py-4 bg-kahgel/30 dark:bg-sormee/30 border-t border-lajevard/5 dark:border-white/5 flex items-center justify-end gap-3 shrink-0">
+                    @Footer
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; } = false;
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    [Parameter] public string Title { get; set; } = "عنوان";
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public RenderFragment Footer { get; set; }
+
+    // اگر true باشد، با کلیک روی پس‌زمینه محو، مودال بسته می‌شود
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(IsOpen);
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await Close();
+        }
+    }
+}

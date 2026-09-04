@@ -1,0 +1,570 @@
+﻿@page "/folders"
+@page "/folders/{FolderId}"
+@inject NavigationManager Navigation
+
+<div class="w-full max-w-7xl mx-auto p-4 md:p-6 pb-24 md:pb-6 space-y-6">
+    
+    <!-- هدر صفحه و دکمه‌های عملیاتی -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                @if (!string.IsNullOrEmpty(FolderId))
+                {
+                    <button @onclick="NavigateToParent" class="p-2.5 rounded-2xl bg-white dark:bg-sormee-light border border-gray-200 dark:border-white/10 text-lajevard dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                        <svg class="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                }
+                <div>
+                    <h1 class="text-2xl font-black text-lajevard dark:text-white">
+                        @(CurrentFolder != null ? CurrentFolder.Name : "پوشه اصلی")
+                    </h1>
+                    <p class="text-sm text-lajevard/60 dark:text-white/60 mt-1">
+                        @(CurrentFolder != null ? $"شناسه پوشه: {CurrentFolder.Id}" : "لیست دسته‌بندی‌ها و فایل‌های ریشه")
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button @onclick="OpenNewFolderModal" class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all active:scale-95">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                زیرپوشه جدید
+            </button>
+            <button @onclick="AddNewFile" class="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all active:scale-95">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                افزودن فایل
+            </button>
+        </div>
+    </div>
+
+    <!-- بخش زیرپوشه‌ها -->
+    <div>
+        <h3 class="text-sm font-bold text-lajevard/70 dark:text-white/70 mb-3">زیرپوشه‌ها (@SubFolders.Count)</h3>
+        @if (!SubFolders.Any())
+        {
+            <div class="text-xs text-gray-400 bg-gray-50 dark:bg-white/5 p-6 rounded-2xl text-center border border-dashed border-gray-200 dark:border-white/10">
+                هیچ زیرپوشه‌ای در این سطح ثبت نشده است.
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                @foreach (var folder in SubFolders)
+                {
+                    bool isLoading = loadingFolderId == folder.Id;
+                    <div @onclick="() => NavigateToChildFolder(folder.Id)" 
+                         class="relative bg-white dark:bg-sormee-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex items-center justify-between">
+                        
+                        <div class="flex items-center gap-3.5 flex-1 min-w-0">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-sm" style="background-color: @(folder.Color + "20"); color: @folder.Color;">
+                                <span class="text-xl">@folder.IconEmoji</span>
+                            </div>
+                            <div class="truncate">
+                                <h4 class="font-bold text-sm text-lajevard dark:text-white group-hover:text-blue-600 transition-colors truncate">@folder.Name</h4>
+                                <p class="text-[10px] text-lajevard/50 dark:text-white/50 mt-0.5">شناسه: @folder.Id</p>
+                            </div>
+                        </div>
+
+                        <!-- دکمه‌ها و منوی تنظیمات پوشه -->
+                        <div class="flex items-center gap-1 shrink-0" @onclick:stopPropagation="true">
+                            <div class="relative">
+                                <button type="button" 
+                                        @onclick="() => ToggleFolderMenu(folder.Id)" 
+                                        class="p-1.5 text-gray-400 hover:text-lajevard dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                                    </svg>
+                                </button>
+
+                                @if (activeMenuFolderId == folder.Id)
+                                {
+                                    <div class="absolute left-0 top-8 w-32 bg-white dark:bg-sormee-light border border-gray-100 dark:border-white/10 rounded-xl shadow-xl py-1 z-20">
+                                        <button type="button" @onclick="() => OpenEditFolderModal(folder)" class="w-full text-right px-3 py-2 text-xs text-lajevard dark:text-white hover:bg-blue-50 dark:hover:bg-white/5 flex items-center gap-2">
+                                            <span>✏️</span> ویرایش
+                                        </button>
+                                        <button type="button" @onclick="() => DeleteFolder(folder.Id)" class="w-full text-right px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2">
+                                            <span>🗑️</span> حذف
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="w-6 h-6 flex items-center justify-center">
+                                @if (isLoading)
+                                {
+                                    <svg class="animate-spin w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg class="w-5 h-5 text-gray-300 group-hover:text-blue-600 transition-colors rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- بخش فایل‌های سطح جاری -->
+    <div class="pt-4 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 class="text-sm font-bold text-lajevard/70 dark:text-white/70">
+                فایل‌های این پوشه (@FilteredFiles.Count)
+            </h3>
+
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <input type="text" 
+                           placeholder="جستجو در فایل‌ها..." 
+                           @bind="searchQuery" 
+                           @bind:event="oninput"
+                           class="w-48 sm:w-64 bg-white dark:bg-sormee-light border border-gray-200 dark:border-white/10 rounded-xl py-2 pr-9 pl-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+                    <svg class="w-4 h-4 absolute right-3 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+
+                <select @bind="sortOption" class="bg-white dark:bg-sormee-light border border-gray-200 dark:border-white/10 rounded-xl py-2 px-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+                    <option value="newest">جدیدترین</option>
+                    <option value="price-asc">ارزان‌ترین</option>
+                    <option value="price-desc">گران‌ترین</option>
+                </select>
+            </div>
+        </div>
+
+        @if (!FilteredFiles.Any())
+        {
+            <div class="text-xs text-gray-400 bg-gray-50 dark:bg-white/5 p-8 rounded-2xl text-center border border-dashed border-gray-200 dark:border-white/10">
+                هیچ ملکی مطابق با شرط‌های انتخاب‌شده پیدا نشد.
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @foreach (var file in FilteredFiles)
+                {
+                    <div class="bg-white dark:bg-sormee-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-gray-100">
+                            <img src="@file.ImageUrl" class="w-full h-full object-cover" alt="@file.Title" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-sm text-lajevard dark:text-white truncate">@file.Title</h4>
+                                <span class="text-[10px] bg-blue-100 text-blue-600 dark:bg-blue-500/20 px-2 py-0.5 rounded-md font-bold">@file.Code</span>
+                            </div>
+                            <p class="text-xs text-lajevard/60 dark:text-white/60 mt-1 truncate">@file.Location</p>
+                            <div class="flex items-center justify-between mt-2">
+                                <span class="font-bold text-blue-600 dark:text-blue-400 text-xs" dir="ltr">@file.PriceFormatted تومان</span>
+                                
+                                <button type="button" 
+                                        @onclick="() => OpenMoveModal(file)"
+                                        class="text-xs text-gray-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                                    </svg>
+                                    <span class="text-[11px] hidden sm:inline">انتقال</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+</div>
+
+<!-- مدال انتقال مرحله‌ای فایل (Drill-down Tree Move Modal) -->
+@if (isMoveModalOpen && fileToMove != null)
+{
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-sormee-light w-full max-w-lg p-6 rounded-[2rem] shadow-xl space-y-4">
+            <div>
+                <h3 class="font-bold text-lg text-lajevard dark:text-white">انتقال مرحله‌ای فایل</h3>
+                <p class="text-xs text-lajevard/60 dark:text-white/60 mt-1">
+                    در حال انتقال: «<span class="font-bold text-blue-600">@fileToMove.Title</span>»
+                </p>
+            </div>
+
+            <!-- مسیر مرحله‌ای داخل مدال -->
+            <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-white/5 px-3 py-2 rounded-xl text-xs overflow-x-auto">
+                <button type="button" @onclick="() => NavigateModalLevel(null)" class="font-bold text-blue-600 hover:underline shrink-0">
+                    📁 ریشه
+                </button>
+                @foreach (var crumb in modalBreadcrumbs)
+                {
+                    <span class="text-gray-400">/</span>
+                    <button type="button" @onclick="() => NavigateModalLevel(crumb.Id)" class="text-lajevard dark:text-white hover:text-blue-600 shrink-0 font-medium">
+                        @crumb.Name
+                    </button>
+                }
+            </div>
+
+            <!-- لیست پوشه‌های سطح انتخابی داخل مدال -->
+            <div class="max-h-64 overflow-y-auto space-y-2 pr-1">
+                @if (!ModalLevelSubFolders.Any())
+                {
+                    <div class="text-xs text-gray-400 text-center py-6 border border-dashed border-gray-200 dark:border-white/10 rounded-xl">
+                        زیرپوشه‌ای در این شاخه نیست. می‌توانید فایل را در همین سطح قرار دهید.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var sub in ModalLevelSubFolders)
+                    {
+                        <div class="w-full p-2.5 rounded-xl border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-between transition-colors">
+                            <button type="button" @onclick="() => NavigateModalLevel(sub.Id)" class="flex items-center gap-2.5 text-right flex-1 truncate">
+                                <span class="text-lg">@sub.IconEmoji</span>
+                                <span class="text-xs font-bold text-lajevard dark:text-white truncate">@sub.Name</span>
+                                <span class="text-[10px] text-gray-400">(@GetSubFolderCount(sub.Id) زیرپوشه)</span>
+                            </button>
+                            <button type="button" @onclick="() => NavigateModalLevel(sub.Id)" class="text-xs text-blue-600 font-bold p-1 hover:underline">
+                                ورود ➔
+                            </button>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- اکشن‌های انتقال -->
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/5">
+                <button type="button" @onclick="CloseMoveModal" class="px-4 py-2 text-xs font-bold text-gray-500">انصراف</button>
+                <button type="button" 
+                        @onclick="ConfirmMoveToCurrentModalLevel" 
+                        disabled="@(modalCurrentFolderId == fileToMove.FolderId || (modalCurrentFolderId == null && fileToMove.FolderId == "root"))"
+                        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all">
+                    انتقال به همین سطح (@(modalCurrentFolder != null ? modalCurrentFolder.Name : "ریشه"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- مدال ایجاد / ویرایش پوشه -->
+@if (isFolderModalOpen)
+{
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-sormee-light w-full max-w-md p-6 rounded-[2rem] shadow-xl space-y-4">
+            <h3 class="font-bold text-lg text-lajevard dark:text-white">
+                @(isEditMode ? "ویرایش مشخصات پوشه" : "ایجاد زیرپوشه جدید")
+            </h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-lajevard/70 dark:text-white/70 block mb-1">نام پوشه</label>
+                    <input type="text" @bind="folderFormName" placeholder="عنوان پوشه..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-lajevard/70 dark:text-white/70 block mb-1">آیکون (ایموجی)</label>
+                    <div class="flex gap-2">
+                        @foreach (var emoji in new[] { "📁", "🏡", "🏢", "🔑", "⭐", "📍", "💼" })
+                        {
+                            <button type="button" @onclick="() => folderFormEmoji = emoji" class="w-10 h-10 rounded-xl border flex items-center justify-center text-lg transition-all @(folderFormEmoji == emoji ? "border-blue-600 bg-blue-50 dark:bg-blue-500/20" : "border-gray-200 dark:border-white/10")">
+                                @emoji
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-lajevard/70 dark:text-white/70 block mb-1">رنگ پوشه</label>
+                    <div class="flex gap-2">
+                        @foreach (var col in new[] { "#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6" })
+                        {
+                            <button type="button" @onclick="() => folderFormColor = col" class="w-8 h-8 rounded-full border-2 transition-transform @(folderFormColor == col ? "scale-110 border-white shadow-md" : "border-transparent")" style="background-color: @col;"></button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" @onclick="CloseFolderModal" class="px-4 py-2 text-xs font-bold text-gray-500">انصراف</button>
+                <button type="button" @onclick="SaveCurrentFolderForm" class="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20">
+                    @(isEditMode ? "ذخیره تغییرات" : "ثبت پوشه")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? FolderId { get; set; }
+
+    private string? loadingFolderId = null;
+    private string searchQuery = "";
+    private string sortOption = "newest";
+    private string? activeMenuFolderId = null;
+
+    public class FolderEntity
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string IconEmoji { get; set; }
+        public string Color { get; set; }
+        public string? ParentId { get; set; }
+    }
+
+    public class FileEntity
+    {
+        public string Id { get; set; }
+        public string FolderId { get; set; }
+        public string Code { get; set; }
+        public string Title { get; set; }
+        public string Location { get; set; }
+        public long RawPrice { get; set; }
+        public string PriceFormatted => RawPrice.ToString("N0");
+        public string ImageUrl { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+    }
+
+    private static List<FolderEntity> FoldersRepo = new()
+    {
+        new FolderEntity { Id = "f-residential", Name = "املاک مسکونی", IconEmoji = "🏡", Color = "#2563eb", ParentId = null },
+        new FolderEntity { Id = "f-commercial", Name = "املاک تجاری", IconEmoji = "🏢", Color = "#10b981", ParentId = null },
+        new FolderEntity { Id = "f-north", Name = "فایل‌های شمال", IconEmoji = "⭐", Color = "#f59e0b", ParentId = "f-residential" },
+        new FolderEntity { Id = "f-villas", Name = "ویلاهای لوکس", IconEmoji = "🔑", Color = "#10b981", ParentId = "f-north" }
+    };
+
+    private static List<FileEntity> FilesRepo = new()
+    {
+        new FileEntity { Id = "p-1", FolderId = "f-residential", Code = "101", Title = "آپارتمان نوساز", Location = "تهران، سعادت‌آباد", RawPrice = 14000000000, ImageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=200&q=80", CreatedAt = DateTime.Now.AddDays(-2) },
+        new FileEntity { Id = "p-2", FolderId = "f-residential", Code = "103", Title = "پنت‌هاوس ویودار", Location = "تهران، فرمانیه", RawPrice = 45000000000, ImageUrl = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=200&q=80", CreatedAt = DateTime.Now.AddDays(-1) },
+        new FileEntity { Id = "p-3", FolderId = "f-north", Code = "102", Title = "ویلای ساحلی", Location = "مازندران، متل قو", RawPrice = 22000000000, ImageUrl = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=200&q=80", CreatedAt = DateTime.Now }
+    };
+
+    private FolderEntity? CurrentFolder => !string.IsNullOrEmpty(FolderId) 
+        ? FoldersRepo.FirstOrDefault(f => f.Id == FolderId) 
+        : null;
+
+    private List<FolderEntity> SubFolders => FoldersRepo
+        .Where(f => f.ParentId == FolderId)
+        .ToList();
+
+    private List<FileEntity> RawFolderFiles => FilesRepo
+        .Where(f => f.FolderId == (FolderId ?? "root"))
+        .ToList();
+
+    private List<FileEntity> FilteredFiles
+    {
+        get
+        {
+            var query = RawFolderFiles.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(f => f.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) 
+                                      || f.Code.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+                                      || f.Location.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            query = sortOption switch
+            {
+                "price-asc" => query.OrderBy(f => f.RawPrice),
+                "price-desc" => query.OrderByDescending(f => f.RawPrice),
+                _ => query.OrderByDescending(f => f.CreatedAt)
+            };
+
+            return query.ToList();
+        }
+    }
+
+    // متغیرهای مدال پوشه (ایجاد / ویرایش)
+    private bool isFolderModalOpen = false;
+    private bool isEditMode = false;
+    private string? editingFolderId = null;
+    private string folderFormName = "";
+    private string folderFormEmoji = "📁";
+    private string folderFormColor = "#2563eb";
+
+    // متغیرهای مدال انتقال مرحله‌ای
+    private bool isMoveModalOpen = false;
+    private FileEntity? fileToMove = null;
+    private string? modalCurrentFolderId = null;
+    private FolderEntity? modalCurrentFolder => !string.IsNullOrEmpty(modalCurrentFolderId) 
+        ? FoldersRepo.FirstOrDefault(f => f.Id == modalCurrentFolderId) 
+        : null;
+    private List<FolderEntity> modalBreadcrumbs = new();
+    private List<FolderEntity> ModalLevelSubFolders => FoldersRepo
+        .Where(f => f.ParentId == modalCurrentFolderId)
+        .ToList();
+
+    private int GetSubFolderCount(string folderId) => FoldersRepo.Count(f => f.ParentId == folderId);
+
+    private void ToggleFolderMenu(string folderId)
+    {
+        activeMenuFolderId = activeMenuFolderId == folderId ? null : folderId;
+    }
+
+    private async Task NavigateToChildFolder(string targetFolderId)
+    {
+        activeMenuFolderId = null;
+        loadingFolderId = targetFolderId;
+        StateHasChanged();
+
+        await Task.Delay(200);
+
+        loadingFolderId = null;
+        Navigation.NavigateTo($"/folders/{targetFolderId}");
+    }
+
+    private void NavigateToParent()
+    {
+        activeMenuFolderId = null;
+        if (CurrentFolder?.ParentId != null)
+        {
+            Navigation.NavigateTo($"/folders/{CurrentFolder.ParentId}");
+        }
+        else
+        {
+            Navigation.NavigateTo("/folders");
+        }
+    }
+
+    private void OpenNewFolderModal()
+    {
+        activeMenuFolderId = null;
+        isEditMode = false;
+        editingFolderId = null;
+        folderFormName = "";
+        folderFormEmoji = "📁";
+        folderFormColor = "#2563eb";
+        isFolderModalOpen = true;
+    }
+
+    private void OpenEditFolderModal(FolderEntity folder)
+    {
+        activeMenuFolderId = null;
+        isEditMode = true;
+        editingFolderId = folder.Id;
+        folderFormName = folder.Name;
+        folderFormEmoji = folder.IconEmoji;
+        folderFormColor = folder.Color;
+        isFolderModalOpen = true;
+    }
+
+    private void CloseFolderModal()
+    {
+        isFolderModalOpen = false;
+    }
+
+    private void SaveCurrentFolderForm()
+    {
+        if (string.IsNullOrWhiteSpace(folderFormName)) return;
+
+        if (isEditMode && !string.IsNullOrEmpty(editingFolderId))
+        {
+            var folder = FoldersRepo.FirstOrDefault(f => f.Id == editingFolderId);
+            if (folder != null)
+            {
+                folder.Name = folderFormName;
+                folder.IconEmoji = folderFormEmoji;
+                folder.Color = folderFormColor;
+            }
+        }
+        else
+        {
+            FoldersRepo.Add(new FolderEntity
+            {
+                Id = Guid.NewGuid().ToString("N").Substring(0, 8),
+                Name = folderFormName,
+                IconEmoji = folderFormEmoji,
+                Color = folderFormColor,
+                ParentId = FolderId
+            });
+        }
+        isFolderModalOpen = false;
+    }
+
+    private void DeleteFolder(string folderId)
+    {
+        activeMenuFolderId = null;
+        // حذف بازگشتی پوشه‌ها و فایل‌های درون آن
+        void DeleteRecursive(string currentId)
+        {
+            var children = FoldersRepo.Where(f => f.ParentId == currentId).Select(f => f.Id).ToList();
+            foreach (var childId in children)
+            {
+                DeleteRecursive(childId);
+            }
+            FilesRepo.RemoveAll(file => file.FolderId == currentId);
+            FoldersRepo.RemoveAll(f => f.Id == currentId);
+        }
+
+        DeleteRecursive(folderId);
+    }
+
+    private void AddNewFile()
+    {
+        var randomPrice = (long)new Random().Next(5, 50) * 1_000_000_000;
+        FilesRepo.Add(new FileEntity
+        {
+            Id = Guid.NewGuid().ToString("N").Substring(0, 6),
+            FolderId = FolderId ?? "root",
+            Code = new Random().Next(1000, 9999).ToString(),
+            Title = "فایل افزوده شده",
+            Location = "موقعیت آزمایشی",
+            RawPrice = randomPrice,
+            ImageUrl = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=200&q=80",
+            CreatedAt = DateTime.Now
+        });
+    }
+
+    // متدهای انتقال مرحله‌ای
+    private void OpenMoveModal(FileEntity file)
+    {
+        fileToMove = file;
+        modalCurrentFolderId = null;
+        BuildModalBreadcrumbs();
+        isMoveModalOpen = true;
+    }
+
+    private void CloseMoveModal()
+    {
+        fileToMove = null;
+        isMoveModalOpen = false;
+    }
+
+    private void NavigateModalLevel(string? targetFolderId)
+    {
+        modalCurrentFolderId = targetFolderId;
+        BuildModalBreadcrumbs();
+    }
+
+    private void BuildModalBreadcrumbs()
+    {
+        modalBreadcrumbs.Clear();
+        var tempId = modalCurrentFolderId;
+        while (!string.IsNullOrEmpty(tempId))
+        {
+            var folder = FoldersRepo.FirstOrDefault(f => f.Id == tempId);
+            if (folder != null)
+            {
+                modalBreadcrumbs.Insert(0, folder);
+                tempId = folder.ParentId;
+            }
+            else break;
+        }
+    }
+
+    private void ConfirmMoveToCurrentModalLevel()
+    {
+        if (fileToMove != null)
+        {
+            fileToMove.FolderId = modalCurrentFolderId ?? "root";
+        }
+        CloseMoveModal();
+    }
+}

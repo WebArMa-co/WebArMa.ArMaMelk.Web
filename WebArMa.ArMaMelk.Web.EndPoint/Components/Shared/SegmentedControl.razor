@@ -1,0 +1,57 @@
+﻿@typeparam TValue
+
+<div class="w-full mb-2">
+
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="block text-sm font-medium mb-2 ml-1 text-lajevard/80 dark:text-white/80">@Label</label>
+    }
+
+    <div class="relative flex w-full bg-blue-50 dark:bg-white/5 p-1 rounded-[1.25rem]">
+
+        <!-- شیشه متحرک (Slider) در پس‌زمینه -->
+        <div class="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-sormee shadow-sm rounded-xl transition-transform duration-300 ease-in-out"
+             style="transform: translateX(@(IsFirstSelected ? "0" : "-100%"));"></div>
+
+        <!-- گزینه اول -->
+        <button type="button" @onclick="SelectFirst"
+                class="relative z-10 flex-1 py-3 text-sm font-bold text-center transition-colors duration-300 rounded-xl @(IsFirstSelected ? "text-blue-600 dark:text-blue-400" : "text-lajevard/60 dark:text-white/60")">
+            @Option1Label
+        </button>
+
+        <!-- گزینه دوم -->
+        <button type="button" @onclick="SelectSecond"
+                class="relative z-10 flex-1 py-3 text-sm font-bold text-center transition-colors duration-300 rounded-xl @(!IsFirstSelected ? "text-blue-600 dark:text-blue-400" : "text-lajevard/60 dark:text-white/60")">
+            @Option2Label
+        </button>
+
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+
+    // استفاده از Generic Type برای اینکه هم بتونید String پاس بدید هم Enum یا عدد
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+
+    [Parameter] public string? Option1Label { get; set; }
+    [Parameter] public TValue? Option1Value { get; set; }
+
+    [Parameter] public string? Option2Label { get; set; }
+    [Parameter] public TValue? Option2Value { get; set; }
+
+    private bool IsFirstSelected => EqualityComparer<TValue>.Default.Equals(Value, Option1Value);
+
+    private async Task SelectFirst()
+    {
+        Value = Option1Value;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task SelectSecond()
+    {
+        Value = Option2Value;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

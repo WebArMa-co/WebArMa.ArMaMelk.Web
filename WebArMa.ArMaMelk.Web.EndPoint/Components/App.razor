@@ -1,0 +1,188 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#1A365D" />
+    <base href="/" />
+
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="lib/leaft/css/leaflet.css" rel="stylesheet" />
+<link href="lib/quill/css/quill.snow.css" rel="stylesheet" />
+
+    <script>
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+            function toggleTheme() {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            }
+    </script>
+
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+<body class="font-sans antialiased">
+
+    <Routes @rendermode="InteractiveServer" />
+
+    <script src="lib/leaft/js/leaflet.js"></script>
+<script src="lib/quill/js/quill.min.js"></script>
+
+    <!-- 🔌 اسکریپت ارتباطی بین بلیزور و نقشه (نسخه پیشرفته) -->
+    <script>
+            window.leafletInterop = {
+                maps: {}, // آرایه‌ای برای نگهداری تمام نقشه‌های باز شده
+
+                // متد برای نقشه کوچک (قفل شده)
+                initStaticMap: function (elementId, lat, lng) {
+                    if (this.maps[elementId]) this.maps[elementId].remove();
+
+                    var map = L.map(elementId, {
+                        zoomControl: false,
+                        dragging: false, // جلوگیری از جابه‌جایی نقشه در فرم
+                        touchZoom: false,
+                        scrollWheelZoom: false,
+                        doubleClickZoom: false
+                    }).setView([lat, lng], 15);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                    this.maps[elementId] = map;
+
+                    setTimeout(() => { map.invalidateSize(); }, 200);
+                },
+
+                // متد برای نقشه بزرگ (قابل جابه‌جایی)
+                initInteractiveMap: function (elementId, lat, lng) {
+                    if (this.maps[elementId]) this.maps[elementId].remove();
+
+                    var map = L.map(elementId, { zoomControl: false }).setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                    this.maps[elementId] = map;
+
+                    setTimeout(() => { map.invalidateSize(); }, 200);
+                },
+
+                // متد گرفتن مختصات
+                getCenter: function (elementId) {
+                    if (this.maps[elementId]) {
+                        var center = this.maps[elementId].getCenter();
+                        return { lat: center.lat, lng: center.lng };
+                    }
+                    return null;
+                },
+
+                // آپدیت کردن جای نقشه کوچک بعد از انتخاب
+                updateMapCenter: function (elementId, lat, lng) {
+                    if (this.maps[elementId]) {
+                        this.maps[elementId].setView([lat, lng]);
+                    }
+                },
+
+                // متد رفتن به لوکیشن فعلی کاربر با GPS
+                goToUserLocation: function (elementId) {
+                    if (navigator.geolocation && this.maps[elementId]) {
+                        var map = this.maps[elementId];
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                var lat = position.coords.latitude;
+                                var lng = position.coords.longitude;
+                                // پرواز نرم نقشه به سمت لوکیشن کاربر با زوم 17
+                                map.flyTo([lat, lng], 17, { animate: true, duration: 1.5 });
+                            },
+                            (error) => {
+                                alert("لطفاً دسترسی به موقعیت مکانی (GPS) را در مرورگر خود فعال کنید.");
+                            },
+                            { enableHighAccuracy: true } // درخواست بالاترین دقت ممکن
+                        );
+                    } else {
+                        alert("مرورگر شما از قابلیت GPS پشتیبانی نمی‌کند.");
+                    }
+                }
+            };
+    </script>
+    <!-- اسکریپت شبیه‌ساز تاچ برای ماوس در دسکتاپ -->
+    <script>
+            window.swipeInterop = {
+                enableMouseDrag: function (slider) {
+                    let isDown = false;
+                    let startX;
+                    let scrollLeft;
+
+                    slider.addEventListener('mousedown', (e) => {
+                        isDown = true;
+                        // موقع درگ کردن با ماوس، اسنپ (قفل شدن) را موقتاً برمی‌داریم تا حرکت نرم باشد
+                        slider.style.scrollSnapType = 'none';
+                        startX = e.pageX - slider.offsetLeft;
+                        scrollLeft = slider.scrollLeft;
+                        slider.style.cursor = 'grabbing';
+                    });
+
+                    slider.addEventListener('mouseleave', () => {
+                        if (!isDown) return;
+                        isDown = false;
+                        slider.style.scrollSnapType = 'x mandatory';
+                        slider.style.cursor = 'pointer';
+                    });
+
+                    slider.addEventListener('mouseup', () => {
+                        isDown = false;
+                        // وقتی ماوس را رها کردیم، دوباره اسنپ فعال می‌شود تا روی دکمه‌ها قفل شود
+                        slider.style.scrollSnapType = 'x mandatory';
+                        slider.style.cursor = 'pointer';
+                    });
+
+                    slider.addEventListener('mousemove', (e) => {
+                        if (!isDown) return;
+                        e.preventDefault();
+                        const x = e.pageX - slider.offsetLeft;
+                        const walk = (x - startX) * 1.5; // سرعت کشیده شدن
+                        slider.scrollLeft = scrollLeft - walk;
+                    });
+                }
+            };
+    </script>
+
+    <script>
+            window.quillInterop = {
+                init: function (element, dotNetRef, initialContent) {
+                    // تنظیمات دکمه‌های بالای ویرایشگر
+                    var toolbarOptions = [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'direction': 'rtl' }, { 'align': [] }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['clean'] // دکمه پاک کردن فرمت‌ها
+                    ];
+
+                    var quill = new Quill(element, {
+                        theme: 'snow',
+                        modules: { toolbar: toolbarOptions }
+                    });
+
+                    // تنظیم پیش‌فرض روی راست‌چین
+                    quill.format('direction', 'rtl');
+                    quill.format('align', 'right');
+
+                    if (initialContent) {
+                        quill.root.innerHTML = initialContent;
+                    }
+
+                    // هر بار که کاربر تایپ می‌کند، متن HTML شده را به C# می‌فرستیم
+                    quill.on('text-change', function() {
+                        var html = quill.root.innerHTML;
+                        dotNetRef.invokeMethodAsync('UpdateContent', html);
+                    });
+                }
+            };
+    </script>
+
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>

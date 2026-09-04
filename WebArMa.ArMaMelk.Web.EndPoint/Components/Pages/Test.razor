@@ -1,0 +1,498 @@
+﻿@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+
+@inject ToastService ToastService
+
+@page "/Test"
+
+
+<PageTitle>آزمایشگاه ابزارها - املاک من</PageTitle>
+
+<div class="space-y-6 animate-fade-in pb-12">
+
+    <!-- هدر خوش‌آمدگویی صفحه -->
+    <div class="bg-white/40 dark:bg-sormee-light/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/5 shadow-sm">
+        <h2 class="text-2xl font-bold text-lajevard dark:text-white mb-2">آزمایشگاه کامپوننت‌ها 🧪</h2>
+        <p class="text-sm text-lajevard/70 dark:text-white/60">تمام کامپوننت‌های پایه‌ای که ساختیم اینجا در کنار هم برای تست قرار گرفته‌اند.</p>
+    </div>
+
+    <!-- بخش جستجوی هوشمند (Autocomplete) -->
+    <div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-firoozeh/10 dark:border-white/5">
+        <h3 class="font-bold text-lg text-lajevard dark:text-white mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-firoozeh" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            جستجوی زنده (Live Search)
+        </h3>
+        <AutoCompleteTextBox TItem="Property"
+                             @bind-Value="searchQuery"
+                             SearchMethod="SearchPropertiesFromDatabase"
+                             TextSelector="x => x.Title"
+                             OnItemSelected="GoToPropertyDetails"
+                             Placeholder="شماره فایل، نام مالک یا منطقه را تایپ کنید (مثلا: آپارتمان)...">
+
+            <ItemTemplate Context="property">
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-lajevard dark:text-white">@property.Title</span>
+                        <span class="text-xs text-lajevard/50 dark:text-white/50 mt-0.5">کد: @property.Code - @property.Area</span>
+                    </div>
+                    <span class="text-xs font-bold text-firoozeh bg-firoozeh/10 px-2.5 py-1.5 rounded-lg">
+                        @property.Price
+                    </span>
+                </div>
+            </ItemTemplate>
+        </AutoCompleteTextBox>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- بخش دراپ‌داون‌ها -->
+        <div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-firoozeh/10 dark:border-white/5 space-y-6">
+            <h3 class="font-bold text-lg text-lajevard dark:text-white mb-2 border-b border-gray-100 dark:border-white/5 pb-4">انواع دراپ‌داون</h3>
+
+            <div>
+                <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80 mb-2 ml-1">تک انتخابی (ساده)</label>
+                <SearchableDropdown TItem="PropertyType" TValue="int" Items="propertyTypes"
+                                    @bind-Value="selectedPropertyTypeId" TextSelector="x => x.Name" ValueSelector="x => x.Id"
+                                    Placeholder="نوع ملک را انتخاب کنید" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80 mb-2 ml-1">همراه با لودینگ دیتابیس</label>
+                <SearchableDropdown TItem="PropertyType" TValue="int" Items="propertyTypes" IsLoading="isFetchingAgents"
+                                    @bind-Value="selectedPropertyTypeId" TextSelector="x => x.Name" ValueSelector="x => x.Id"
+                                    Placeholder="در حال دریافت اطلاعات..." />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80 mb-2 ml-1">چند انتخابی (امکانات)</label>
+                <SearchableDropdown TItem="PropertyType" TValue="int" Items="features" IsMultiSelect="true"
+                                    @bind-SelectedValues="selectedPropertyTypeIds" TextSelector="x => x.Name" ValueSelector="x => x.Id"
+                                    Placeholder="امکانات ملک را انتخاب کنید (چند مورد)" />
+            </div>
+        </div>
+
+        <!-- بخش تقویم و ساعت -->
+        <div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-firoozeh/10 dark:border-white/5 space-y-6">
+            <h3 class="font-bold text-lg text-lajevard dark:text-white mb-2 border-b border-gray-100 dark:border-white/5 pb-4">انتخابگر زمان و تاریخ</h3>
+
+            <div>
+                <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80 mb-2 ml-1">تاریخ قرارداد (با محدودیت تعطیلات)</label>
+                <PersianDatePicker @bind-Value="contractDate" MinDate="DateTime.Now" MaxDate="DateTime.Now.AddMonths(3)"
+                                   DisableHolidays="true" Holidays="customHolidays" Placeholder="تاریخ قرارداد را انتخاب کنید" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80 mb-2 ml-1">تاریخ بازدید</label>
+                    <PersianDatePicker @bind-Value="visitDate" Placeholder="تاریخ را انتخاب کنید" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-lajevard/80 dark:text-white/80 mb-2 ml-1">ساعت بازدید (محدود)</label>
+                    <TimePicker @bind-Value="visitTime" MinHour="8" MaxHour="21" Placeholder="ساعت (۸ الی ۲۱)" />
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- بخش تست مودال -->
+    <div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-firoozeh/10 dark:border-white/5 flex items-center justify-between">
+        <div>
+            <h3 class="font-bold text-lg text-lajevard dark:text-white mb-1">تست مودال iOS</h3>
+            <p class="text-sm text-lajevard/60 dark:text-white/60">باز کردن فرم ترکیبی داخل مودال</p>
+        </div>
+        <button @onclick="OpenAddModal" class="bg-firoozeh text-white px-6 py-3 rounded-[1.25rem] font-bold shadow-lg shadow-firoozeh/30 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            ثبت بازدید
+        </button>
+    </div>
+
+</div>
+
+<!-- ======================================= -->
+<!-- کامپوننت مودال (مخفی تا زمان کلیک) -->
+<!-- ======================================= -->
+<AppModal @bind-IsOpen="isModalOpen" Title="ثبت زمان بازدید ملک">
+
+    <ChildContent>
+        <div class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium mb-2 ml-1 text-lajevard dark:text-white">نام مشتری</label>
+                <input type="text" @bind="customerName" class="w-full bg-kahgel/50 dark:bg-sormee/50 rounded-xl px-4 py-3 outline-none border border-firoozeh/10 dark:border-white/5 focus:ring-2 focus:ring-firoozeh/30 transition-all text-sm text-lajevard dark:text-white" placeholder="مثلاً: آقای محمدی" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2 ml-1 text-lajevard dark:text-white">نوع ملک</label>
+                <SearchableDropdown TItem="PropertyType" TValue="int" Items="propertyTypes"
+                                    @bind-Value="selectedPropertyId" TextSelector="x => x.Name" ValueSelector="x => x.Id"
+                                    Placeholder="انتخاب کنید..." />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 ml-1 text-lajevard dark:text-white">تاریخ بازدید</label>
+                    <PersianDatePicker @bind-Value="visitDate" MinDate="DateTime.Now" DisableHolidays="true" Placeholder="انتخاب تاریخ" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 ml-1 text-lajevard dark:text-white">ساعت بازدید</label>
+                    <TimePicker @bind-Value="visitTime" MinHour="8" MaxHour="21" Placeholder="انتخاب ساعت" />
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+
+    <Footer>
+        <button @onclick="CloseAddModal" class="px-5 py-2.5 rounded-xl bg-kahgel dark:bg-sormee text-lajevard dark:text-white text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+            انصراف
+        </button>
+        <button @onclick="SaveVisit" class="px-5 py-2.5 rounded-xl bg-firoozeh text-white text-sm font-bold shadow-md shadow-firoozeh/30 hover:opacity-90 active:scale-95 transition-all">
+            ثبت و ذخیره
+        </button>
+    </Footer>
+</AppModal>
+
+<!-- بخش تست فرم مبلغ -->
+<div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-6">
+    <h3 class="font-bold text-lg text-lajevard dark:text-white mb-2 border-b border-gray-100 dark:border-white/5 pb-4">
+        ورودی مبالغ مالی 💰
+    </h3>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <PriceInput @bind-Value="propertyPrice" Label="مبلغ کل ملک (برای فروش)" Placeholder="مثلاً 15,000,000,000" />
+        <PriceInput @bind-Value="rentPrice" Label="مبلغ اجاره ماهیانه" Placeholder="مبلغ به تومان..." />
+    </div>
+</div>
+
+<!-- بخش تست آپلود تصاویر -->
+<div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-6">
+    <h3 class="font-bold text-lg text-lajevard dark:text-white mb-2 border-b border-gray-100 dark:border-white/5 pb-4 flex items-center gap-2">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        گالری تصاویر و ویدیوها 📸
+    </h3>
+
+    <!-- کامپوننت آپلودر -->
+    <MediaUploader OnFilesChanged="HandleFiles" MaxAllowedFiles="5" MaxFileSizeMb="20" Label="فایل‌های ملک (حداکثر ۵ عدد)" />
+</div>
+
+<!-- بخش تست نقشه -->
+<div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-6">
+    <h3 class="font-bold text-lg text-lajevard dark:text-white mb-2 border-b border-gray-100 dark:border-white/5 pb-4 flex items-center gap-2">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        لوکیشن ملک 📍
+    </h3>
+
+    <MapLocationPicker Latitude="selectedLat"
+                       Longitude="selectedLng"
+                       OnLocationSelected="HandleLocation"
+                       Label="آدرس دقیق روی نقشه" />
+</div>
+
+<!-- بخش تست فرم امکانات -->
+<div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-4">
+    <h3 class="font-bold text-lg text-lajevard dark:text-white mb-4 border-b border-gray-100 dark:border-white/5 pb-4">
+        نوع و امکانات ملک ✨
+    </h3>
+
+    <!-- تست Segmented Control -->
+    <SegmentedControl @bind-Value="dealType"
+                      Label="نوع معامله"
+                      Option1Label="خرید و فروش" Option1Value="@("Sale")"
+                      Option2Label="رهن و اجاره" Option2Value="@("Rent")" />
+
+    <div class="h-4"></div> <!-- فاصله -->
+    <!-- تست Toggle Switches -->
+    <div class="divide-y divide-gray-100 dark:divide-white/5">
+        <ToggleSwitch @bind-Value="hasParking"
+                      Label="پارکینگ اختصاصی"
+                      Description="ملک دارای پارکینگ سندی می‌باشد" />
+
+        <ToggleSwitch @bind-Value="isElevator"
+                      Label="آسانسور" />
+
+        <ToggleSwitch @bind-Value="isConvertible"
+                      Label="قابل تبدیل"
+                      Description="مبلغ رهن و اجاره قابل تبدیل است" />
+    </div>
+</div>
+
+<!-- بخش تست لیست کشیدنی (Swipe-to-Action) -->
+<div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-4">
+    <h3 class="font-bold text-lg text-lajevard dark:text-white mb-4 border-b border-gray-100 dark:border-white/5 pb-4 flex items-center justify-between">
+        <span class="flex items-center gap-2">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            فایل‌های من 👈
+        </span>
+        <span class="text-xs font-normal text-lajevard/50 dark:text-white/50 bg-gray-100 dark:bg-white/5 px-2 py-1 rounded-lg">به چپ بکشید</span>
+    </h3>
+
+    <div class="flex flex-col gap-4">
+
+        <!-- آیتم اول -->
+        <SwipeToAction OnEdit='() => EditProperty("آپارتمان ۱۲۰ متری سعادت‌آباد")'
+                       OnDelete='() => DeleteProperty("آپارتمان ۱۲۰ متری سعادت‌آباد")'>
+
+            <div class="p-3 flex items-center gap-4">
+                <!-- عکس ملک -->
+                <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 relative">
+                    <div class="absolute inset-0 bg-blue-600/10 dark:bg-white/10 animate-pulse"></div>
+                    <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=150&q=80" class="w-full h-full object-cover" alt="house" />
+                </div>
+
+                <!-- اطلاعات ملک -->
+                <div class="flex flex-col flex-1 py-1">
+                    <div class="flex justify-between items-start mb-1">
+                        <h4 class="font-bold text-sm text-lajevard dark:text-white line-clamp-1">آپارتمان ۱۲۰ متری</h4>
+                        <span class="text-[10px] font-bold bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md">فروش</span>
+                    </div>
+                    <span class="text-xs text-lajevard/60 dark:text-white/60 mb-2">سعادت‌آباد، بلوار دریا</span>
+                    <div class="font-bold text-blue-600 dark:text-blue-400 text-sm mt-auto" dir="ltr">
+                        12,500,000,000 <span class="text-[10px] text-lajevard/50 dark:text-white/50 font-normal ml-1" dir="rtl">تومان</span>
+                    </div>
+                </div>
+            </div>
+
+        </SwipeToAction>
+
+        <!-- آیتم دوم -->
+        <SwipeToAction OnEdit='() => EditProperty("ویلای ۴۰۰ متری لواسان")'
+                       OnDelete='() => DeleteProperty("ویلای ۴۰۰ متری لواسان")'>
+
+            <div class="p-3 flex items-center gap-4">
+                <div class="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-100 dark:bg-white/5">
+                    <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=150&q=80" class="w-full h-full object-cover" alt="house" />
+                </div>
+                <div class="flex flex-col flex-1 py-1">
+                    <div class="flex justify-between items-start mb-1">
+                        <h4 class="font-bold text-sm text-lajevard dark:text-white line-clamp-1">ویلای ۴۰۰ متری</h4>
+                        <span class="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-md">اجاره</span>
+                    </div>
+                    <span class="text-xs text-lajevard/60 dark:text-white/60 mb-2">لواسان، بلوار امام</span>
+                    <div class="font-bold text-blue-600 dark:text-blue-400 text-sm mt-auto" dir="ltr">
+                        300,000,000 <span class="text-[10px] text-lajevard/50 dark:text-white/50 font-normal ml-1" dir="rtl">تومان / ماه</span>
+                    </div>
+                </div>
+            </div>
+
+        </SwipeToAction>
+
+    </div>
+</div>
+
+<!-- بخش تست ویرایشگر متن غنی (شبیه Word) -->
+<div class="bg-white dark:bg-sormee-light p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-4">
+    <h3 class="font-bold text-lg text-lajevard dark:text-white mb-4 border-b border-gray-100 dark:border-white/5 pb-4 flex items-center gap-2">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        توضیحات تکمیلی 📝
+    </h3>
+
+    <RichTextEditor @bind-Value="propertyDescription" Label="توضیحات و ویژگی‌های خاص ملک را بنویسید" />
+
+    <!-- نمایش خروجی HTML برای اطمینان از صحت کار -->
+    @if (!string.IsNullOrWhiteSpace(propertyDescription) && propertyDescription != "<p><br></p>")
+    {
+        <div class="mt-4 p-4 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/5">
+            <p class="text-xs text-gray-500 mb-2 font-bold">خروجی نهایی که در دیتابیس ذخیره می‌شود:</p>
+            <div class="text-sm text-gray-700 dark:text-gray-300" dir="ltr">
+                <code>@propertyDescription</code>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- تست Stepper / شمارنده‌ها -->
+<div class="divide-y divide-gray-100 dark:divide-white/5 border-t border-gray-100 dark:border-white/5 mt-4 pt-2">
+
+    <Stepper @bind-Value="bedroomsCount"
+             Label="تعداد اتاق خواب"
+             Min="0" Max="6"
+             ZeroText="بدون خواب" />
+
+    <Stepper @bind-Value="bathroomsCount"
+             Label="سرویس بهداشتی و حمام"
+             Min="0" Max="5" />
+
+    <Stepper @bind-Value="parkingCount"
+             Label="تعداد پارکینگ"
+             Description="پارکینگ‌های اختصاصی و سندی"
+             Min="0" Max="4"
+             ZeroText="ندارد" />
+
+</div>
+
+<!-- دکمه شناور ایجاد آیتم جدید -->
+<FabSpeedDial OnActionSelected="HandleFabAction" />
+
+@code {
+    private long? propertyPrice = 12500000000; // مقدار اولیه ۱۲.۵ میلیارد
+    private long? rentPrice;
+    private string dealType = "Sale";
+    private bool hasParking = true;
+    private bool isElevator = false;
+    private bool isConvertible = true;
+    private string propertyDescription = "";
+    private int bedroomsCount = 2; // پیش‌فرض 2 خوابه
+    private int bathroomsCount = 1;
+    private int parkingCount = 1;
+
+    // ==========================================
+    // 1. Models (مدل‌های داده‌ای)
+    // ==========================================
+    public class Property { public int Id { get; set; } public string Title { get; set; } public string Code { get; set; } public string Area { get; set; } public string Price { get; set; } }
+    public class PropertyType { public int Id { get; set; } public string Name { get; set; } }
+
+    // ==========================================
+    // 2. State Variables (وضعیت‌ها و متغیرهای فرم)
+    // ==========================================
+    private string searchQuery = "";
+    private string customerName = "";
+
+    private int selectedPropertyTypeId;
+    private int selectedPropertyId;
+    private List<int> selectedPropertyTypeIds = new();
+
+    private DateTime? contractDate;
+    private DateTime? visitDate;
+    private TimeSpan? visitTime;
+
+    private bool isFetchingAgents = true;
+    private bool isModalOpen = false;
+
+    private List<IBrowserFile> uploadedFiles = new();
+
+    private void HandleFiles(List<IBrowserFile> files)
+    {
+        uploadedFiles = files;
+        // در پروژه واقعی، اینجا فایل‌ها را نگه می‌دارید تا زمان زدن دکمه "ثبت نهایی"
+        // آن‌ها را به سمت API یا دیتابیس بفرستید.
+        Console.WriteLine($"تعداد فایل‌های آماده آپلود: {uploadedFiles.Count}");
+    }
+
+    // ==========================================
+    // 3. Mock Data (داده‌های تستی)
+    // ==========================================
+    private List<PropertyType> propertyTypes = new()
+    {
+        new PropertyType { Id = 1, Name = "آپارتمان" },
+        new PropertyType { Id = 2, Name = "ویلایی / حیاط‌دار" },
+        new PropertyType { Id = 3, Name = "زمین / کلنگی" },
+        new PropertyType { Id = 4, Name = "مغازه / تجاری" },
+        new PropertyType { Id = 5, Name = "سوله / صنعتی" }
+    };
+
+    private List<PropertyType> features = new()
+    {
+        new PropertyType { Id = 1, Name = "پارکینگ" },
+        new PropertyType { Id = 2, Name = "آسانسور" },
+        new PropertyType { Id = 3, Name = "انباری" },
+        new PropertyType { Id = 4, Name = "استخر" },
+        new PropertyType { Id = 5, Name = "لابی‌من" }
+    };
+
+    private List<DateTime> customHolidays = new()
+    {
+        new DateTime(2026, 3, 21),
+        new DateTime(2026, 4, 1),
+        new DateTime(2026, 9, 4),
+        new DateTime(2026, 9, 8)
+    };
+
+    // ==========================================
+    // 4. Methods (متدها و منطق برنامه)
+    // ==========================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        // شبیه‌سازی لود شدن اطلاعات از سرور برای نشان دادن لودر دراپ‌داون
+        await Task.Delay(2000);
+        isFetchingAgents = false;
+    }
+
+    private async Task<IEnumerable<Property>> SearchPropertiesFromDatabase(string query)
+    {
+        await Task.Delay(500); // شبیه‌سازی تاخیر اینترنت
+
+        var db = new List<Property>
+        {
+            new Property { Id = 1, Title = "آپارتمان ۱۲۰ متری", Code = "PR-102", Area = "نیاوران", Price = "۱۲ میلیارد" },
+            new Property { Id = 2, Title = "ویلای استخردار", Code = "PR-105", Area = "لواسان", Price = "۳۵ میلیارد" }
+        };
+
+        return db.Where(x => x.Title.Contains(query) || x.Code.Contains(query));
+    }
+
+    private void GoToPropertyDetails(Property selectedProp)
+    {
+        Console.WriteLine($"Navigate to Property ID: {selectedProp.Id}");
+    }
+
+    private void OpenAddModal()
+    {
+        customerName = "";
+        selectedPropertyId = 0;
+        visitDate = null;
+        visitTime = null;
+        isModalOpen = true;
+    }
+
+    private void CloseAddModal()
+    {
+        ToastService.ShowError($"بازدید برای {customerName} انصراف شد!");
+        isModalOpen = false;
+    }
+
+    private void SaveVisit()
+    {
+        ToastService.ShowSuccess($"بازدید برای {customerName} با موفقیت ثبت شد!");
+        isModalOpen = false;
+    }
+
+    // ==========================================
+    // 5. نقشه
+    // ==========================================
+
+    private double? selectedLat;
+    private double? selectedLng;
+
+    private void HandleLocation((double Lat, double Lng) location)
+    {
+        selectedLat = location.Lat;
+        selectedLng = location.Lng;
+        ToastService.ShowSuccess($"لوکیشن ثبت شد: {location.Lat} , {location.Lng}");
+    }
+
+    // ==========================================
+    // 6. SwipeToAction
+    // ==========================================
+
+    private void EditProperty(string title)
+    {
+        ToastService.ShowInfo($"در حال انتقال به فرم ویرایش: {title}");
+    }
+
+    private void DeleteProperty(string title)
+    {
+        ToastService.ShowError($"فایل {title} با موفقیت حذف شد.");
+    }
+
+    // ==========================================
+    // 6. FabAction
+    // ==========================================
+
+    private void HandleFabAction(FabSpeedDial.FabAction action)
+    {
+        switch (action)
+        {
+            case FabSpeedDial.FabAction.NewProperty:
+                ToastService.ShowInfo("در حال باز کردن فرم ثبت ملک...");
+                // NavigationManager.NavigateTo("/add-property");
+                break;
+
+            case FabSpeedDial.FabAction.NewReminder:
+                ToastService.ShowSuccess("تقویم یادآوری‌ها باز شد.");
+                break;
+
+            case FabSpeedDial.FabAction.NewRequest:
+                ToastService.ShowInfo("فرم ثبت تقاضای مشتری باز شد.");
+                break;
+        }
+    }
+}

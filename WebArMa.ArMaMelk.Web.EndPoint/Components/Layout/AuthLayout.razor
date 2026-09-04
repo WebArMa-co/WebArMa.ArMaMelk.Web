@@ -1,0 +1,64 @@
+﻿@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+
+<div class="min-h-screen relative flex flex-col bg-gray-50 dark:bg-sormee transition-colors duration-500 overflow-hidden" dir="rtl">
+
+    <!-- دکمه تغییر تم (تاریک/روشن) شناور -->
+    <div class="absolute top-4 left-4 sm:top-6 sm:left-6 z-50">
+        <button type="button" @onclick="ToggleTheme" class="p-3 rounded-full bg-white/80 dark:bg-sormee-light/80 backdrop-blur-md text-lajevard dark:text-amber-400 shadow-lg border border-gray-200 dark:border-white/10 hover:scale-110 active:scale-95 transition-all">
+            @if (isDarkMode)
+            {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            }
+            else
+            {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            }
+        </button>
+    </div>
+
+    <!-- پس‌زمینه دکوراتیو لوکس (نورهای تار) -->
+    <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden flex justify-center items-center">
+        <div class="absolute top-0 right-0 w-72 h-72 sm:w-[500px] sm:h-[500px] bg-blue-500/20 dark:bg-blue-600/10 rounded-full blur-[80px] sm:blur-[120px] translate-x-1/3 -translate-y-1/4"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 sm:w-[400px] sm:h-[400px] bg-emerald-500/20 dark:bg-emerald-500/10 rounded-full blur-[80px] sm:blur-[120px] -translate-x-1/3 translate-y-1/4"></div>
+    </div>
+
+    <!-- شبح شهر (City Skyline SVG) در پایین صفحه -->
+    <svg class="absolute bottom-0 w-full h-40 sm:h-56 text-lajevard dark:text-white opacity-[0.04] dark:opacity-[0.03] pointer-events-none z-0" preserveAspectRatio="none" viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg">
+        <!-- ساختمان‌های لایه عقب -->
+        <path fill="currentColor" d="M0 120h1200V80h-40v10h-20V60h-50v30h-30V50h-40v40h-20V70h-30v20h-40V60h-50v30h-30V40h-40v50h-20V70h-30v20h-40V50h-50v40h-30V60h-40v30h-20V70h-30v20h-40V40h-50v50h-20V60h-30v30h-40V50h-50v40h-30V70h-40v20h-20V60h-30v30h-40V80H0z" />
+        <!-- ساختمان‌های لایه جلو -->
+        <path fill="currentColor" opacity="0.6" d="M50 120h1100V90h-30v10h-20V70h-40v30h-30V60h-40v40h-20V80h-30v20h-40V70h-50v30h-30V50h-40v50h-20V80h-30v20h-40V60h-50v40h-30V70h-40v30h-20V80h-30v20h-40V50h-50v50h-20V70h-30v30h-40V60h-50v40h-30V80h-40v20h-20V70h-30v30h-40V90H50z" />
+    </svg>
+
+    <!-- محتوای اصلی فرم (تزریق Login / Register) -->
+    <div class="flex-1 flex flex-col items-center justify-center p-4 z-10 relative">
+        <div class="w-full max-w-sm animate-fade-in-up mt-8">
+            @Body
+        </div>
+
+        <p class="text-[10px] text-lajevard/40 dark:text-white/40 mt-8 font-medium tracking-wide">
+            سیستم مدیریت هوشمند املاک
+        </p>
+    </div>
+
+</div>
+
+@code {
+    private bool isDarkMode = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", "document.documentElement.classList.contains('dark')");
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        await JSRuntime.InvokeVoidAsync("eval", "document.documentElement.classList.toggle('dark')");
+    }
+}

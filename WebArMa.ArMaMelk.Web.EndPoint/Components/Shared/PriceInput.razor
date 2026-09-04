@@ -1,0 +1,171 @@
+﻿<div class="w-full text-lajevard dark:text-white relative">
+
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="block text-sm font-medium mb-2 ml-1 text-lajevard/80 dark:text-white/80">@Label</label>
+    }
+
+    <div class="relative flex items-center">
+
+        <div class="absolute right-4 flex items-center pointer-events-none text-blue-600/50 dark:text-white/40">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+        </div>
+
+        <!-- اضافه شدن maxlength="19" برای جلوگیری از تایپ اضافی -->
+        <input type="text"
+               value="@DisplayValue"
+               @oninput="OnInputChanged"
+               placeholder="@Placeholder"
+               dir="ltr"
+               maxlength="19"
+               class="w-full bg-white dark:bg-sormee-light rounded-[1.25rem] pr-12 pl-20 py-3.5 text-lg font-bold tracking-wider text-left shadow-[0_4px_15px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.04)] dark:shadow-none border border-blue-600/10 dark:border-white/5 outline-none focus:ring-2 focus:ring-blue-600/30 transition-all text-blue-700 dark:text-blue-400 placeholder:text-lajevard/30 dark:placeholder:text-white/30 placeholder:font-normal placeholder:text-sm" />
+
+        <div class="absolute left-4 flex items-center pointer-events-none text-sm font-bold text-lajevard/40 dark:text-white/40">
+            تومان
+        </div>
+
+    </div>
+
+    <!-- نمایش عدد به حروف فارسی -->
+    <div class="h-6 mt-1.5 px-2">
+        @if (Value.HasValue && Value.Value > 0)
+        {
+            <div class="text-xs font-bold text-blue-600/80 dark:text-blue-400/80 animate-fade-in flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="truncate">@NumberToText(Value.Value) تومان</span>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public long? Value { get; set; }
+    [Parameter] public EventCallback<long?> ValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "مبلغ";
+    [Parameter] public string Placeholder { get; set; } = "0";
+
+    private string DisplayValue = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Value.HasValue && Value.Value > 0)
+        {
+            DisplayValue = Value.Value.ToString("#,##0");
+        }
+        else
+        {
+            DisplayValue = "";
+        }
+    }
+
+    private async Task OnInputChanged(ChangeEventArgs e)
+    {
+        var inputValue = e.Value?.ToString() ?? "";
+        inputValue = ConvertToEnglishDigits(inputValue);
+
+        var numericString = new string(inputValue.Where(char.IsDigit).ToArray());
+
+        if (numericString.Length > 15)
+        {
+            numericString = numericString.Substring(0, 15);
+        }
+
+        if (long.TryParse(numericString, out long parsedValue))
+        {
+            Value = parsedValue;
+            var newFormattedValue = parsedValue.ToString("#,##0");
+
+            // ترفند Blazor: اگر DOM به هم ریخت (مثلا کاربر حرفی زد که حذف شد، یا صفری زد که سقف پر شده بود)
+            // رندر را با یک مکث کوتاه اجباری می‌کنیم تا مرورگر از کد ما اطاعت کند
+            if (DisplayValue == newFormattedValue && inputValue != newFormattedValue)
+            {
+                DisplayValue = inputValue;
+                await Task.Yield(); // توقف در حد میکروثانیه برای رفرش DOM
+            }
+
+            DisplayValue = newFormattedValue;
+        }
+        else
+        {
+            Value = null;
+            DisplayValue = "";
+        }
+
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private string ConvertToEnglishDigits(string input)
+    {
+        return input.Replace("۰", "0").Replace("۱", "1").Replace("۲", "2").Replace("۳", "3").Replace("۴", "4")
+                    .Replace("۵", "5").Replace("۶", "6").Replace("۷", "7").Replace("۸", "8").Replace("۹", "9")
+                    .Replace("٠", "0").Replace("١", "1").Replace("٢", "2").Replace("٣", "3").Replace("٤", "4")
+                    .Replace("٥", "5").Replace("٦", "6").Replace("٧", "7").Replace("٨", "8").Replace("٩", "9");
+    }
+
+    private static readonly string[] Yekan = { "صفر", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه" };
+    private static readonly string[] Dahgan = { "", "ده", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود" };
+    private static readonly string[] DahToNozdah = { "ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده" };
+    private static readonly string[] Sadgan = { "", "صد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد" };
+    private static readonly string[] Magnitudes = { "", "هزار", "میلیون", "میلیارد", "همت (هزار میلیارد)", "تریلیون" };
+
+    private string NumberToText(long number)
+    {
+        if (number == 0) return Yekan[0];
+        if (number < 0) return "منفی " + NumberToText(-number);
+
+        var parts = new List<string>();
+        int magnitudeIndex = 0;
+
+        while (number > 0)
+        {
+            int section = (int)(number % 1000);
+            if (section > 0)
+            {
+                string sectionText = GetSectionText(section);
+                string magnitudeText = "";
+                if (magnitudeIndex > 0)
+                {
+                    if (magnitudeIndex < Magnitudes.Length)
+                    {
+                        magnitudeText = " " + Magnitudes[magnitudeIndex];
+                    }
+                    else
+                    {
+                        magnitudeText = " مقیاس بسیار بزرگ";
+                    }
+                }
+
+                parts.Insert(0, sectionText + magnitudeText);
+            }
+            number /= 1000;
+            magnitudeIndex++;
+        }
+
+        return string.Join(" و ", parts);
+    }
+
+    private string GetSectionText(int number)
+    {
+        var parts = new List<string>();
+
+        int sadgan = number / 100;
+        int dahgan = (number % 100) / 10;
+        int yekan = number % 10;
+
+        if (sadgan > 0) parts.Add(Sadgan[sadgan]);
+
+        if (dahgan == 1)
+        {
+            parts.Add(DahToNozdah[yekan]);
+        }
+        else
+        {
+            if (dahgan > 1) parts.Add(Dahgan[dahgan]);
+            if (yekan > 0) parts.Add(Yekan[yekan]);
+        }
+
+        return string.Join(" و ", parts);
+    }
+}

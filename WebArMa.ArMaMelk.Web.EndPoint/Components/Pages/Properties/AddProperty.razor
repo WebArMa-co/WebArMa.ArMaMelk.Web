@@ -1,0 +1,393 @@
+﻿@page "/add-property"
+@page "/add-property/{TargetFolderId}"
+@inject NavigationManager Navigation
+
+<div class="w-full max-w-4xl mx-auto p-4 md:p-6 pb-28 md:pb-8 space-y-6">
+
+    <!-- هدر صفحه -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-black text-lajevard dark:text-white">ثبت ملک جدید</h1>
+            <p class="text-xs md:text-sm text-lajevard/60 dark:text-white/60 mt-0.5">ثبت مشخصات، موقعیت مکانی و امکانات در پوشه فایلینگ</p>
+        </div>
+        <button type="button" @onclick="CancelForm" class="p-2.5 rounded-2xl bg-white dark:bg-sormee-light border border-gray-200 dark:border-white/10 text-gray-500 hover:text-red-500 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- نوار مراحل ثبت (Step Indicator) -->
+    <div class="grid grid-cols-4 gap-2 bg-white dark:bg-sormee-light p-2 rounded-2xl border border-blue-600/10 dark:border-white/5">
+        @for (int i = 1; i <= 4; i++)
+        {
+            int stepNum = i;
+            bool isActive = currentStep == stepNum;
+            bool isPassed = currentStep > stepNum;
+            <button type="button"
+                    @onclick="() => GoToStep(stepNum)"
+                    class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1 @(isActive ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" : isPassed ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400" : "text-lajevard/40 dark:text-white/40")">
+                <span class="text-xs font-black">گام @stepNum</span>
+                <span class="text-[10px] hidden sm:inline">@GetStepTitle(stepNum)</span>
+            </button>
+        }
+    </div>
+
+    <!-- فرم مرحله‌ای -->
+    <div class="bg-white dark:bg-sormee-light p-5 md:p-8 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5">
+
+        <!-- گام ۱: اطلاعات کلی و پوشه -->
+        @if (currentStep == 1)
+        {
+            <div class="space-y-6">
+                <h3 class="font-bold text-base text-lajevard dark:text-white pb-3 border-b border-gray-100 dark:border-white/5 flex items-center gap-2">
+                    <span>📋</span> اطلاعات اولیه و پوشه فایلینگ
+                </h3>
+
+                <!-- انتخاب پوشه مقصد -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">پوشه ذخیره‌سازی فایل</label>
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3 flex items-center gap-2.5">
+                            <span class="text-xl">@(selectedFolder?.IconEmoji ?? "📁")</span>
+                            <div>
+                                <div class="text-xs font-bold text-lajevard dark:text-white">@(selectedFolder?.Name ?? "پوشه ریشه (پیش‌فرض)")</div>
+                                <div class="text-[10px] text-lajevard/50 dark:text-white/50">شناسه: @(selectedFolder?.Id ?? "root")</div>
+                            </div>
+                        </div>
+                        <button type="button" @onclick="() => isFolderPickerOpen = true" class="px-4 py-3 bg-blue-50 dark:bg-white/5 text-blue-600 dark:text-blue-400 rounded-2xl text-xs font-bold border border-blue-600/20 hover:bg-blue-100 transition-colors">
+                            تغییر پوشه
+                        </button>
+                    </div>
+                </div>
+
+                <!-- عنوان ملک -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">عنوان آگهی / فایل</label>
+                    <input type="text" @bind="propertyForm.Title" placeholder="مثلاً: آپارتمان ۱۲۰ متری تک‌واحدی نورگیر" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3.5 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" />
+                </div>
+
+                <!-- نوع معامله با SegmentedControl -->
+                <SegmentedControl @bind-Value="propertyForm.DealType"
+                                  Label="نوع معامله"
+                                  Option1Label="خرید و فروش" Option1Value="@("فروش")"
+                                  Option2Label="رهن و اجاره" Option2Value="@("اجاره")" />
+
+                <!-- متراژ و قیمت -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">متراژ مفید (متر مربع)</label>
+                        <input type="number" @bind="propertyForm.Area" placeholder="مثلاً: 120" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3.5 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">
+                            @(propertyForm.DealType == "فروش" ? "قیمت کل (تومان)" : "مبلغ رهن / ودیعه (تومان)")
+                        </label>
+                        <input type="number" @bind="propertyForm.Price" placeholder="مثلاً: 15000000000" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3.5 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" dir="ltr" />
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- گام ۲: موقعیت مکانی و نقشه -->
+        @if (currentStep == 2)
+        {
+            <div class="space-y-6">
+                <h3 class="font-bold text-base text-lajevard dark:text-white pb-3 border-b border-gray-100 dark:border-white/5 flex items-center gap-2">
+                    <span>📍</span> آدرس و موقعیت روی نقشه
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">شهر و منطقه</label>
+                        <input type="text" @bind="propertyForm.CityAndZone" placeholder="مثلاً: تهران، سعادت‌آباد" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3.5 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">آدرس دقیق و پلاک (محرمانه برای مشاور)</label>
+                        <input type="text" @bind="propertyForm.FullAddress" placeholder="بلوار دریا، خیابان صرافها، پلاک ..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3.5 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" />
+                    </div>
+                </div>
+
+                <!-- پیاده‌سازی کامپوننت نقشه اختصاصی -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">تعیین دقیق موقعیت ملک (روی نقشه کلیک کنید یا با دکمه GPS پیدا کنید)</label>
+                    <div class="h-64 sm:h-80 w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 relative">
+                        <MapLocationPicker Latitude="propertyForm.Latitude"
+                                           Longitude="propertyForm.Longitude"
+                                           OnLocationSelected="HandleLocationSelected" />
+                    </div>
+                    <p class="text-[11px] text-lajevard/50 dark:text-white/50">
+                        مختصات ثبت شده: @propertyForm.Latitude.ToString("F4") , @propertyForm.Longitude.ToString("F4")
+                    </p>
+                </div>
+            </div>
+        }
+
+        <!-- گام ۳: امکانات و جزئیات فیزیکی -->
+        @if (currentStep == 3)
+        {
+            <div class="space-y-6">
+                <h3 class="font-bold text-base text-lajevard dark:text-white pb-3 border-b border-gray-100 dark:border-white/5 flex items-center gap-2">
+                    <span>🛋️</span> تعداد فضاها و امکانات بنا
+                </h3>
+
+                <!-- شمارنده‌های استپر -->
+                <div class="divide-y divide-gray-100 dark:divide-white/5 bg-gray-50/50 dark:bg-white/5 p-4 rounded-2xl">
+                    <Stepper @bind-Value="propertyForm.Rooms"
+                             Label="تعداد اتاق خواب"
+                             Min="0" Max="8"
+                             ZeroText="بدون خواب" />
+
+                    <Stepper @bind-Value="propertyForm.ParkingCount"
+                             Label="تعداد پارکینگ سندی"
+                             Min="0" Max="5"
+                             ZeroText="ندارد" />
+
+                    <Stepper @bind-Value="propertyForm.Bathrooms"
+                             Label="سرویس بهداشتی و حمام"
+                             Min="1" Max="6" />
+                </div>
+
+                <!-- سوئیچ‌های بله/خیر -->
+                <div class="divide-y divide-gray-100 dark:divide-white/5 bg-gray-50/50 dark:bg-white/5 p-4 rounded-2xl">
+                    <ToggleSwitch @bind-Value="propertyForm.HasElevator"
+                                  Label="آسانسور"
+                                  Description="ساختمان مجهز به آسانسور فعال است" />
+
+                    <ToggleSwitch @bind-Value="propertyForm.HasStorage"
+                                  Label="انباری اختصاصی" />
+
+                    <ToggleSwitch @bind-Value="propertyForm.IsConvertible"
+                                  Label="قابل تبدیل"
+                                  Description="مبلغ رهن و اجاره قابل توافق و تبدیل است" />
+                </div>
+
+                <!-- تگ‌های امکانات جانبی -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">سایر امکانات ویژه</label>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var feat in AllAvailableFeatures)
+                        {
+                            bool isSelected = propertyForm.SelectedFeatures.Contains(feat);
+                            <button type="button"
+                                    @onclick="() => ToggleFeature(feat)"
+                                    class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all border @(isSelected ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20" : "bg-white dark:bg-sormee-light text-lajevard/70 dark:text-white/70 border-gray-200 dark:border-white/10")">
+                                @(isSelected ? "✓ " : "")@feat
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- گام ۴: توضیحات و عکس‌ها -->
+        @if (currentStep == 4)
+        {
+            <div class="space-y-6">
+                <h3 class="font-bold text-base text-lajevard dark:text-white pb-3 border-b border-gray-100 dark:border-white/5 flex items-center gap-2">
+                    <span>📝</span> توضیحات تکمیلی و ذخیره نهایی
+                </h3>
+
+                <!-- آدرس تصویر ملک -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-lajevard/70 dark:text-white/70">آدرس تصویر شاخص (URL)</label>
+                    <input type="text" @bind="propertyForm.ImageUrl" placeholder="https://..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-3.5 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" dir="ltr" />
+                </div>
+
+                <!-- ویرایشگر متن Quill -->
+                <div class="space-y-1.5">
+                    <RichTextEditor @bind-Value="propertyForm.Description"
+                                    Label="توضیحات تکمیلی ملک (فرمت‌بندی آزاد)" />
+                </div>
+
+                <!-- پیش‌نمایش کارت خلاصه -->
+                <div class="bg-blue-50/50 dark:bg-white/5 p-4 rounded-2xl border border-blue-600/10 dark:border-white/5 space-y-2">
+                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400">پیش‌نمایش خلاصه فایل:</span>
+                    <div class="flex items-center justify-between text-xs text-lajevard dark:text-white">
+                        <span>@propertyForm.Title</span>
+                        <span class="font-bold">@propertyForm.Price.ToString("N0") تومان</span>
+                    </div>
+                    <div class="text-[11px] text-lajevard/60 dark:text-white/60">
+                        @propertyForm.CityAndZone • @propertyForm.Area متر • @propertyForm.Rooms خواب • پوشه: @(selectedFolder?.Name ?? "ریشه")
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- نوار دکمه‌های ناوبری فرم -->
+        <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-100 dark:border-white/5">
+            @if (currentStep > 1)
+            {
+                <button type="button" @onclick="PrevStep" class="px-5 py-3 rounded-2xl border border-gray-200 dark:border-white/10 text-xs font-bold text-lajevard dark:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    مرحله قبلی
+                </button>
+            }
+            else
+            {
+                <div></div>
+            }
+
+            @if (currentStep < 4)
+            {
+                <button type="button" @onclick="NextStep" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-600/20 transition-all active:scale-95">
+                    مرحله بعدی ➔
+                </button>
+            }
+            else
+            {
+                <button type="button" @onclick="SaveProperty" class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-95">
+                    ✓ ثبت و ذخیره نهایی ملک
+                </button>
+            }
+        </div>
+
+    </div>
+
+</div>
+
+<!-- مدال انتخاب پوشه فایلینگ -->
+@if (isFolderPickerOpen)
+{
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-sormee-light w-full max-w-md p-6 rounded-[2rem] shadow-xl space-y-4">
+            <h3 class="font-bold text-lg text-lajevard dark:text-white">انتخاب پوشه فایلینگ</h3>
+
+            <div class="max-h-60 overflow-y-auto space-y-2 pr-1">
+                <!-- ریشه -->
+                <button type="button" @onclick='() => SelectFolder("root", "پوشه اصلی (ریشه)", "📁")' class="w-full text-right p-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+                    <span class="text-xl">📁</span>
+                    <div>
+                        <div class="text-xs font-bold text-lajevard dark:text-white">پوشه اصلی (ریشه)</div>
+                        <div class="text-[10px] text-gray-400">شناسه: root</div>
+                    </div>
+                </button>
+
+                <!-- سایر پوشه‌ها -->
+                @foreach (var f in SystemFolders)
+                {
+                    <button type="button" @onclick="() => SelectFolder(f.Id, f.Name, f.IconEmoji)" class="w-full text-right p-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+                        <span class="text-xl">@f.IconEmoji</span>
+                        <div>
+                            <div class="text-xs font-bold text-lajevard dark:text-white">@f.Name</div>
+                            <div class="text-[10px] text-gray-400">شناسه: @f.Id</div>
+                        </div>
+                    </button>
+                }
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-gray-100 dark:border-white/5">
+                <button type="button" @onclick="() => isFolderPickerOpen = false" class="px-4 py-2 text-xs font-bold text-gray-500">انصراف</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? TargetFolderId { get; set; }
+
+    private int currentStep = 1;
+    private bool isFolderPickerOpen = false;
+
+    public class FolderSimple
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string IconEmoji { get; set; }
+    }
+
+    private List<FolderSimple> SystemFolders = new()
+    {
+        new FolderSimple { Id = "f-residential", Name = "املاک مسکونی", IconEmoji = "🏡" },
+        new FolderSimple { Id = "f-commercial", Name = "املاک تجاری", IconEmoji = "🏢" },
+        new FolderSimple { Id = "f-north", Name = "فایل‌های شمال", IconEmoji = "⭐" }
+    };
+
+    private FolderSimple? selectedFolder;
+
+    public class NewPropertyModel
+    {
+        public string Title { get; set; } = "";
+        public string FolderId { get; set; } = "root";
+        public string DealType { get; set; } = "فروش";
+        public int Area { get; set; } = 100;
+        public long Price { get; set; } = 12000000000;
+        public string CityAndZone { get; set; } = "تهران، سعادت‌آباد";
+        public string FullAddress { get; set; } = "";
+        public double Latitude { get; set; } = 35.7796;
+        public double Longitude { get; set; } = 51.3688;
+        public int Rooms { get; set; } = 2;
+        public int ParkingCount { get; set; } = 1;
+        public int Bathrooms { get; set; } = 1;
+        public bool HasElevator { get; set; } = true;
+        public bool HasStorage { get; set; } = true;
+        public bool IsConvertible { get; set; } = false;
+        public List<string> SelectedFeatures { get; set; } = new() { "پارکینگ", "آسانسور" };
+        public string ImageUrl { get; set; } = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80";
+        public string Description { get; set; } = "<p>ملک بسیار خوش‌نقشه و با نورگیر عالی، دسترسی فوق‌العاده به اتوبان و مراکز تجاری.</p>";
+    }
+
+    private NewPropertyModel propertyForm = new();
+    private List<string> AllAvailableFeatures = new() { "پارکینگ", "آسانسور", "انباری", "استخر", "سونا", "جکوزی", "روف‌گاردن", "لابی‌من", "بالکن" };
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(TargetFolderId))
+        {
+            var folder = SystemFolders.FirstOrDefault(f => f.Id == TargetFolderId);
+            if (folder != null)
+            {
+                selectedFolder = folder;
+                propertyForm.FolderId = folder.Id;
+            }
+        }
+    }
+
+    private void HandleLocationSelected((double Lat, double Lng) coords)
+    {
+        propertyForm.Latitude = coords.Lat;
+        propertyForm.Longitude = coords.Lng;
+    }
+
+    private string GetStepTitle(int step) => step switch
+    {
+        1 => "مشخصات",
+        2 => "موقعیت",
+        3 => "امکانات",
+        4 => "توضیحات",
+        _ => ""
+    };
+
+    private void GoToStep(int step) => currentStep = step;
+    private void NextStep() { if (currentStep < 4) currentStep++; }
+    private void PrevStep() { if (currentStep > 1) currentStep--; }
+
+    private void ToggleFeature(string feat)
+    {
+        if (propertyForm.SelectedFeatures.Contains(feat))
+            propertyForm.SelectedFeatures.Remove(feat);
+        else
+            propertyForm.SelectedFeatures.Add(feat);
+    }
+
+    private void SelectFolder(string id, string name, string emoji)
+    {
+        selectedFolder = new FolderSimple { Id = id, Name = name, IconEmoji = emoji };
+        propertyForm.FolderId = id;
+        isFolderPickerOpen = false;
+    }
+
+    private void CancelForm()
+    {
+        Navigation.NavigateTo("/folders");
+    }
+
+    private void SaveProperty()
+    {
+        // در صورت ثبت موفقیت‌آمیز، کاربر به پوشه مربوطه هدایت می‌شود
+        if (propertyForm.FolderId == "root")
+            Navigation.NavigateTo("/folders");
+        else
+            Navigation.NavigateTo($"/folders/{propertyForm.FolderId}");
+    }
+}

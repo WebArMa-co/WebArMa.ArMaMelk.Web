@@ -1,0 +1,79 @@
+﻿@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<!-- 👇 این استایل‌ها، لیست‌ها را در تیلویند زنده می‌کنند و برای فارسی راست‌چین تنظیم می‌کنند 👇 -->
+<style>
+    .ql-editor ul {
+        list-style-type: disc !important;
+        padding-right: 1.5rem !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .ql-editor ol {
+        list-style-type: decimal !important;
+        padding-right: 1.5rem !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .ql-editor li {
+        margin-bottom: 0.25rem !important;
+    }
+        /* غیرفعال کردن بولت‌های خودِ کویل که با تیلویند تداخل دارند، تا مرورگر خودش بولت‌های تمیز بسازد */
+        .ql-editor li::before {
+            display: none !important;
+        }
+</style>
+
+<div class="w-full text-lajevard dark:text-white">
+
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="block text-sm font-medium mb-2 ml-1 text-lajevard/80 dark:text-white/80">@Label</label>
+    }
+
+    <div class="relative w-full rounded-[1.5rem] overflow-hidden border border-blue-600/20 dark:border-white/10 bg-white dark:bg-sormee-light shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all
+        [&_.ql-toolbar]:bg-gray-50 [&_.ql-toolbar]:dark:bg-white/5 [&_.ql-toolbar]:border-none [&_.ql-toolbar]:border-b [&_.ql-toolbar]:dark:border-white/10
+        [&_.ql-container]:border-none [&_.ql-container]:text-base [&_.ql-container]:font-sans
+        [&_.ql-editor]:min-h-[150px] [&_.ql-editor]:dark:text-white [&_.ql-picker-label]:dark:text-white [&_.ql-stroke]:dark:stroke-white [&_.ql-fill]:dark:fill-white">
+
+        <div @ref="editorElement"></div>
+
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "توضیحات ملک";
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private ElementReference editorElement;
+    private DotNetObjectReference<RichTextEditor>? dotNetRef;
+    private bool isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("quillInterop.init", editorElement, dotNetRef, Value);
+            isInitialized = true;
+        }
+    }
+
+    [JSInvokable]
+    public async Task UpdateContent(string html)
+    {
+        if (Value != html)
+        {
+            Value = html;
+            await ValueChanged.InvokeAsync(Value);
+        }
+    }
+
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
+    }
+}

@@ -1,0 +1,235 @@
+﻿@using System.Globalization
+
+<div class="relative w-full text-lajevard dark:text-white" id="datepicker-@Id">
+
+    <!-- دکمه باز کردن تقویم -->
+    <button type="button" @onclick="Toggle"
+            class="w-full flex items-center justify-between bg-white dark:bg-sormee-light rounded-[1.25rem] px-4 py-3.5 text-sm shadow-[0_4px_15px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300 border border-firoozeh/10 dark:border-white/5 focus:ring-2 focus:ring-firoozeh/30">
+
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-lajevard/40 dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            <span class="@(Value.HasValue ? "font-medium" : "text-lajevard/50 dark:text-white/50") pt-0.5">
+                @(Value.HasValue ? GetPersianDateString(Value.Value) : Placeholder)
+            </span>
+        </div>
+
+        @if (Value.HasValue)
+        {
+            <div @onclick:stopPropagation="true" @onclick="Clear" class="p-1 hover:bg-zaferan/10 rounded-full text-lajevard/40 hover:text-zaferan transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </div>
+        }
+    </button>
+
+    @if (isOpen)
+    {
+        <!-- کانتینر تمام صفحه با z-index بالاتر از مودال (70) -->
+        <div class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+
+            <!-- پس‌زمینه تاریک پشت تقویم -->
+            <div class="absolute inset-0 bg-lajevard/20 dark:bg-black/40 backdrop-blur-sm transition-opacity animate-fade-in" @onclick="Close"></div>
+
+            <!-- پاپ‌آپ تقویم که حالا دقیقاً وسط صفحه شناور می‌شود -->
+            <div class="relative w-72 bg-white/95 dark:bg-sormee-light/95 backdrop-blur-xl border border-firoozeh/10 dark:border-white/5 rounded-[2rem] shadow-[0_20px_60px_rgb(0,0,0,0.15)] dark:shadow-black/60 p-5 animate-scale-up z-10 flex flex-col">
+
+                <!-- هدر تقویم -->
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <button type="button" @onclick="PrevMonth" class="p-1.5 rounded-xl hover:bg-kahgel dark:hover:bg-sormee text-lajevard/70 dark:text-white/70 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+
+                    <div class="font-bold text-sm">
+                        @MonthNames[currentMonth - 1] @currentYear
+                    </div>
+
+                    <button type="button" @onclick="NextMonth" class="p-1.5 rounded-xl hover:bg-kahgel dark:hover:bg-sormee text-lajevard/70 dark:text-white/70 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- روزهای هفته -->
+                <div class="grid grid-cols-7 gap-1 mb-2 text-center text-[11px] font-bold text-lajevard/40 dark:text-white/40">
+                    <div>ش</div><div>ی</div><div>د</div><div>س</div><div>چ</div><div>پ</div><div class="text-zaferan">ج</div>
+                </div>
+
+                <!-- شبکه‌ی روزها -->
+                <div class="grid grid-cols-7 gap-1 text-sm text-center">
+                    @for (int i = 0; i < emptyDaysAtStart; i++)
+                    {
+                        <div class="p-2"></div>
+                    }
+
+                    @for (int day = 1; day <= daysInMonth; day++)
+                    {
+                        int d = day;
+                        DateTime currentDate = pc.ToDateTime(currentYear, currentMonth, d, 0, 0, 0, 0);
+
+                        bool isSelected = Value.HasValue && currentDate.Date == Value.Value.Date;
+                        bool isToday = currentDate.Date == DateTime.Now.Date;
+                        bool isFriday = currentDate.DayOfWeek == DayOfWeek.Friday;
+                        bool isExplicitHoliday = Holidays.Any(h => h.Date == currentDate.Date);
+                        bool isHoliday = isFriday || isExplicitHoliday;
+
+                        bool isOutOfRange = (MinDate.HasValue && currentDate.Date < MinDate.Value.Date) ||
+                                            (MaxDate.HasValue && currentDate.Date > MaxDate.Value.Date);
+
+                        bool isDisabled = isOutOfRange || (DisableHolidays && isHoliday);
+
+                        <button type="button" @onclick="() => SelectDate(d, isDisabled)" disabled="@isDisabled"
+                                class="w-8 h-8 mx-auto flex items-center justify-center rounded-xl transition-all duration-200
+                            @(isDisabled ? "cursor-not-allowed bg-transparent" : "hover:bg-kahgel dark:hover:bg-sormee cursor-pointer")
+                            @(isSelected ? "bg-firoozeh text-white font-bold shadow-md shadow-firoozeh/30 hover:bg-firoozeh dark:hover:bg-firoozeh" :
+                              isToday ? "border border-firoozeh/50 text-firoozeh font-bold bg-firoozeh/5" :
+                              isHoliday ? $"text-zaferan font-medium {(isDisabled ? "opacity-40" : "")}" :
+                              isDisabled ? "opacity-30 text-lajevard/20 dark:text-white/20" :
+                              "text-lajevard/80 dark:text-white/80")">
+                            @d
+                        </button>
+                    }
+                </div>
+
+                <!-- دکمه امروز -->
+                @{
+                    DateTime today = DateTime.Now.Date;
+                    bool isTodayFriday = today.DayOfWeek == DayOfWeek.Friday;
+                    bool isTodayExplicitHoliday = Holidays.Any(h => h.Date == today);
+                    bool isTodayHoliday = isTodayFriday || isTodayExplicitHoliday;
+
+                    bool isTodayDisabled = (MinDate.HasValue && today < MinDate.Value.Date) ||
+                                           (MaxDate.HasValue && today > MaxDate.Value.Date) ||
+                                           (DisableHolidays && isTodayHoliday);
+                }
+                <div class="mt-5 pt-4 border-t border-firoozeh/10 dark:border-white/5 flex gap-2">
+                    <button type="button" @onclick="GoToToday" disabled="@isTodayDisabled" class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors @(isTodayDisabled ? "text-lajevard/30 dark:text-white/30 cursor-not-allowed bg-kahgel/50 dark:bg-sormee/50" : "text-firoozeh bg-firoozeh/10 hover:bg-firoozeh/20")">
+                        برو به امروز
+                    </button>
+                    <!-- دکمه بستن برای UX بهتر -->
+                    <button type="button" @onclick="Close" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-kahgel dark:bg-sormee text-lajevard/70 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                        بستن
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DateTime? Value { get; set; }
+    [Parameter] public EventCallback<DateTime?> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "انتخاب تاریخ";
+
+
+    [Parameter] public DateTime? MinDate { get; set; }
+    [Parameter] public DateTime? MaxDate { get; set; }
+    [Parameter] public IEnumerable<DateTime> Holidays { get; set; } = Array.Empty<DateTime>();
+    [Parameter] public bool DisableHolidays { get; set; } = false;
+
+    private string Id = Guid.NewGuid().ToString("N");
+    private bool isOpen = false;
+    private PersianCalendar pc = new PersianCalendar();
+
+    private int currentYear;
+    private int currentMonth;
+    private int daysInMonth;
+    private int emptyDaysAtStart;
+
+    private readonly string[] MonthNames = { "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند" };
+
+    protected override void OnInitialized()
+    {
+        UpdateCalendarView();
+    }
+
+    private void UpdateCalendarView()
+    {
+        var dateToShow = Value ?? DateTime.Now.Date;
+
+        if (MinDate.HasValue && dateToShow < MinDate.Value) dateToShow = MinDate.Value;
+        if (MaxDate.HasValue && dateToShow > MaxDate.Value) dateToShow = MaxDate.Value;
+
+        currentYear = pc.GetYear(dateToShow);
+        currentMonth = pc.GetMonth(dateToShow);
+        CalculateCalendar();
+    }
+
+    private void CalculateCalendar()
+    {
+        daysInMonth = pc.GetDaysInMonth(currentYear, currentMonth);
+        DateTime firstDayOfMonth = pc.ToDateTime(currentYear, currentMonth, 1, 0, 0, 0, 0);
+
+        emptyDaysAtStart = firstDayOfMonth.DayOfWeek switch
+        {
+            DayOfWeek.Saturday => 0,
+            DayOfWeek.Sunday => 1,
+            DayOfWeek.Monday => 2,
+            DayOfWeek.Tuesday => 3,
+            DayOfWeek.Wednesday => 4,
+            DayOfWeek.Thursday => 5,
+            DayOfWeek.Friday => 6,
+            _ => 0
+        };
+    }
+
+    private void NextMonth()
+    {
+        if (currentMonth == 12) { currentMonth = 1; currentYear++; }
+        else { currentMonth++; }
+        CalculateCalendar();
+    }
+
+    private void PrevMonth()
+    {
+        if (currentMonth == 1) { currentMonth = 12; currentYear--; }
+        else { currentMonth--; }
+        CalculateCalendar();
+    }
+
+    private async Task SelectDate(int day, bool isDisabled)
+    {
+        if (isDisabled) return;
+
+        DateTime selected = pc.ToDateTime(currentYear, currentMonth, day, 0, 0, 0, 0);
+
+        Value = selected;
+        await ValueChanged.InvokeAsync(Value);
+        isOpen = false;
+    }
+
+    private async Task Clear()
+    {
+        Value = null;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private void GoToToday()
+    {
+        DateTime today = DateTime.Now;
+        bool isTodayFriday = today.DayOfWeek == DayOfWeek.Friday;
+        bool isTodayHoliday = isTodayFriday || Holidays.Any(h => h.Date == today.Date);
+
+        if ((MinDate.HasValue && today.Date < MinDate.Value.Date) ||
+            (MaxDate.HasValue && today.Date > MaxDate.Value.Date) ||
+            (DisableHolidays && isTodayHoliday)) return;
+
+        currentYear = pc.GetYear(today);
+        currentMonth = pc.GetMonth(today);
+        CalculateCalendar();
+    }
+
+    private void Toggle()
+    {
+        isOpen = !isOpen;
+        if (isOpen)
+        {
+            // هر بار که تقویم باز می‌شود، نما را روی مقدار فعلی یا پیش‌فرض تنظیم می‌کنیم
+            UpdateCalendarView();
+        }
+    }
+
+    private void Close() => isOpen = false;
+
+    private string GetPersianDateString(DateTime date)
+    {
+        return $"{pc.GetYear(date)}/{pc.GetMonth(date):00}/{pc.GetDayOfMonth(date):00}";
+    }
+}

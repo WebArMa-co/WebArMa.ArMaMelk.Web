@@ -1,0 +1,185 @@
+﻿@typeparam TItem
+@typeparam TValue
+
+<div class="relative w-full text-lajevard dark:text-white">
+
+    <!-- دکمه اصلی دراپ‌داون -->
+    <button type="button" @onclick="ToggleDropdown" disabled="@(IsLoading && !isOpen)"
+            class="w-full flex items-center justify-between bg-white dark:bg-sormee-light rounded-[1.25rem] px-4 py-3.5 text-sm shadow-[0_4px_15px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300 border border-firoozeh/10 dark:border-white/5 focus:ring-2 focus:ring-firoozeh/30 @(IsLoading ? "opacity-80 cursor-wait" : "")">
+
+        <span class="@(IsPlaceholder ? "text-lajevard/50 dark:text-white/50" : "font-medium") truncate text-right ml-2 block w-full">
+            @DisplayText
+        </span>
+
+        <!-- نمایش لودر یا آیکون فلش بر اساس وضعیت IsLoading -->
+        @if (IsLoading)
+        {
+            <svg class="w-5 h-5 shrink-0 text-firoozeh animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        }
+        else
+        {
+            <svg class="w-5 h-5 shrink-0 text-lajevard/40 dark:text-white/40 transition-transform duration-300 @(isOpen ? "rotate-180" : "")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        }
+    </button>
+
+    <!-- منوی بازشونده -->
+    @if (isOpen)
+    {
+        <div class="fixed inset-0 z-40 bg-transparent" @onclick="CloseDropdown"></div>
+
+        <div class="absolute z-50 w-full mt-2 bg-white/95 dark:bg-sormee-light/95 backdrop-blur-xl border border-firoozeh/10 dark:border-white/5 rounded-[1.5rem] shadow-[0_20px_40px_rgb(0,0,0,0.08)] dark:shadow-black/40 p-2 overflow-hidden transition-all duration-300">
+
+            <!-- باکس جستجو -->
+            <div class="relative mb-2">
+                <svg class="absolute right-3 top-2.5 w-5 h-5 text-lajevard/40 dark:text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+
+                <input type="text"
+                       @bind="searchTerm"
+                       @bind:event="oninput"
+                       placeholder="جستجو کنید..."
+                       autocomplete="off"
+                       class="w-full bg-kahgel/50 dark:bg-sormee/50 rounded-xl pr-10 pl-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-firoozeh/30 transition-all text-lajevard dark:text-white placeholder-lajevard/40 dark:placeholder-white/40" />
+            </div>
+
+            <!-- لیست آیتم‌ها -->
+            <ul class="max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                @if (IsLoading)
+                {
+                    <li class="px-3 py-6 flex flex-col items-center justify-center text-sm text-lajevard/50 dark:text-white/50">
+                        <svg class="w-8 h-8 mb-3 text-firoozeh animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>در حال دریافت اطلاعات...</span>
+                    </li>
+                }
+                else if (FilteredItems.Any())
+                {
+                    @foreach (var item in FilteredItems)
+                    {
+                        bool isSelected = IsItemSelected(item);
+
+                        <li @onclick="() => SelectItem(item)"
+                            class="flex items-center justify-between px-3 py-2.5 mb-1 rounded-xl cursor-pointer text-sm transition-colors duration-200
+                            @(isSelected ? "bg-firoozeh/10 dark:bg-firoozeh/20 text-firoozeh font-bold" : "hover:bg-kahgel dark:hover:bg-sormee text-lajevard/80 dark:text-white/80")">
+
+                            <span class="truncate">@TextSelector(item)</span>
+
+                            @if (IsMultiSelect)
+                            {
+                                <div class="w-5 h-5 rounded-[0.4rem] border flex items-center justify-center shrink-0 transition-colors duration-200 @(isSelected ? "bg-firoozeh border-firoozeh text-white" : "border-lajevard/30 dark:border-white/30")">
+                                    @if (isSelected)
+                                    {
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    }
+                                </div>
+                            }
+                            else if (isSelected)
+                            {
+                                <svg class="w-4 h-4 text-firoozeh shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            }
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="px-3 py-4 text-center text-sm text-lajevard/50 dark:text-white/50">
+                        موردی یافت نشد.
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem> Items { get; set; } = Array.Empty<TItem>();
+
+    [Parameter] public Func<TItem, string> TextSelector { get; set; } = default!;
+    [Parameter] public Func<TItem, TValue> ValueSelector { get; set; } = default!;
+    [Parameter] public string Placeholder { get; set; } = "انتخاب کنید";
+
+    // --- پارامتر اضافه شده برای لودینگ ---
+    [Parameter] public bool IsLoading { get; set; } = false;
+
+    // --- پارامترهای تک‌انتخابی ---
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+
+    // --- پارامترهای چندانتخابی ---
+    [Parameter] public bool IsMultiSelect { get; set; } = false;
+    [Parameter] public List<TValue> SelectedValues { get; set; } = new();
+    [Parameter] public EventCallback<List<TValue>> SelectedValuesChanged { get; set; }
+
+    private bool isOpen = false;
+    private string searchTerm = "";
+
+    private IEnumerable<TItem> FilteredItems => string.IsNullOrWhiteSpace(searchTerm)
+        ? Items
+        : Items.Where(i => TextSelector(i).Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private bool IsPlaceholder => IsMultiSelect
+        ? !SelectedValues.Any()
+        : (Value == null || EqualityComparer<TValue>.Default.Equals(Value, default));
+
+    private string DisplayText
+    {
+        get
+        {
+            if (IsPlaceholder) return IsLoading ? "در حال بارگذاری..." : Placeholder;
+
+            if (IsMultiSelect)
+            {
+                var selectedItems = Items.Where(i => SelectedValues.Contains(ValueSelector(i))).Select(TextSelector).ToList();
+                return selectedItems.Any() ? string.Join("، ", selectedItems) : Placeholder;
+            }
+            else
+            {
+                var selectedItem = Items.FirstOrDefault(i => EqualityComparer<TValue>.Default.Equals(ValueSelector(i), Value));
+                return selectedItem != null ? TextSelector(selectedItem) : Placeholder;
+            }
+        }
+    }
+
+    private void ToggleDropdown()
+    {
+        isOpen = !isOpen;
+        if (isOpen) searchTerm = "";
+    }
+
+    private void CloseDropdown() => isOpen = false;
+
+    private bool IsItemSelected(TItem item)
+    {
+        var val = ValueSelector(item);
+        if (IsMultiSelect)
+            return SelectedValues.Contains(val);
+        return EqualityComparer<TValue>.Default.Equals(val, Value);
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        var val = ValueSelector(item);
+
+        if (IsMultiSelect)
+        {
+            if (SelectedValues.Contains(val)) SelectedValues.Remove(val);
+            else SelectedValues.Add(val);
+
+            await SelectedValuesChanged.InvokeAsync(SelectedValues);
+        }
+        else
+        {
+            Value = val;
+            await ValueChanged.InvokeAsync(Value);
+            isOpen = false;
+        }
+    }
+}

@@ -1,0 +1,87 @@
+﻿<!-- پس‌زمینه تاریک‌شونده (Backdrop) -->
+<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9000] transition-opacity duration-300 @(IsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")"
+     @onclick="CloseMenu"></div>
+
+<!-- کانتینر اصلی دکمه شناور (انتقال به left-6 و چیدمان مخصوص سمت چپ) -->
+<div class="fixed bottom-6 left-6 z-[9001] pb-safe flex flex-col items-end">
+
+    <!-- لیست گزینه‌های پاپ‌آپ -->
+    <div class="flex flex-col items-end mb-4 gap-4 transition-all duration-300 origin-bottom-left @(IsOpen ? "scale-100 opacity-100 translate-y-0" : "scale-50 opacity-0 translate-y-10 pointer-events-none")">
+
+        <!-- گزینه ۱ -->
+        <div class="flex items-center gap-2 cursor-pointer group" @onclick="() => ActionClicked(FabAction.NewRequest)">
+            <span class="bg-white dark:bg-sormee-light text-lajevard dark:text-white px-3 py-1.5 rounded-xl text-sm font-bold shadow-md whitespace-nowrap transition-transform active:scale-95">
+                ثبت تقاضای مشتری
+            </span>
+            <!-- کانتینر تنظیم‌کننده عرض آیکون (برای تراز شدن دقیق روی دکمه اصلی) -->
+            <div class="w-14 flex items-center justify-center">
+                <button class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg transition-transform active:scale-90">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- گزینه ۲ -->
+        <div class="flex items-center gap-2 cursor-pointer group" @onclick="() => ActionClicked(FabAction.NewReminder)">
+            <span class="bg-white dark:bg-sormee-light text-lajevard dark:text-white px-3 py-1.5 rounded-xl text-sm font-bold shadow-md whitespace-nowrap transition-transform active:scale-95">
+                یادآوری بازدید / جلسه
+            </span>
+            <div class="w-14 flex items-center justify-center">
+                <button class="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg transition-transform active:scale-90">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- گزینه ۳ -->
+        <div class="flex items-center gap-2 cursor-pointer group" @onclick="() => ActionClicked(FabAction.NewProperty)">
+            <span class="bg-white dark:bg-sormee-light text-lajevard dark:text-white px-3 py-1.5 rounded-xl text-sm font-bold shadow-md whitespace-nowrap transition-transform active:scale-95">
+                ثبت فایل ملک جدید
+            </span>
+            <div class="w-14 flex items-center justify-center">
+                <button class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg transition-transform active:scale-90">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- دکمه اصلی (مادر) -->
+    <button @onclick="ToggleMenu" class="relative w-14 h-14 rounded-[1.25rem] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-[0_10px_25px_rgba(37,99,235,0.4)] active:scale-95 transition-all duration-300">
+        <svg class="w-7 h-7 transition-transform duration-300 @(IsOpen ? "rotate-135" : "rotate-0")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+        </svg>
+    </button>
+
+</div>
+
+@code {
+    [Parameter] public EventCallback<FabAction> OnActionSelected { get; set; }
+
+    private bool IsOpen = false;
+
+    private void ToggleMenu()
+    {
+        IsOpen = !IsOpen;
+    }
+
+    private void CloseMenu()
+    {
+        IsOpen = false;
+    }
+
+    private async Task ActionClicked(FabAction action)
+    {
+        CloseMenu();
+        await Task.Delay(200);
+        await OnActionSelected.InvokeAsync(action);
+    }
+
+    public enum FabAction
+    {
+        NewProperty,
+        NewReminder,
+        NewRequest
+    }
+}

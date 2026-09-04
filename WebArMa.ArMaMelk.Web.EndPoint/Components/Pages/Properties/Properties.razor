@@ -1,0 +1,451 @@
+﻿@page "/Properties"
+@inject NavigationManager Navigation
+
+<div class="w-full max-w-7xl mx-auto p-4 md:p-6 pb-24 md:pb-8 space-y-6">
+
+    <!-- هدر صفحه -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-lajevard dark:text-white">آرشیو جامع فایل‌های املاک</h1>
+            <p class="text-sm text-lajevard/60 dark:text-white/60 mt-1">جستجوی توصیفی و پیشرفته در بین تمامی فایل‌های سیستم</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="text-xs bg-blue-50 dark:bg-white/5 text-blue-600 dark:text-blue-400 font-bold px-3 py-2 rounded-xl border border-blue-600/10 dark:border-white/10">
+                مجموع نتایج: @FilteredProperties.Count فایل
+            </span>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- پنل جستجوی توصیفی و پیشرفته -->
+    <!-- ========================================== -->
+    <div class="bg-white dark:bg-sormee-light p-4 md:p-6 rounded-[2rem] shadow-sm border border-blue-600/10 dark:border-white/5 space-y-4">
+
+        <!-- نوار جستجوی توصیفی -->
+        <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+                <input type="text"
+                       placeholder="جستجوی توصیفی (مثال: ۳ خواب سعادت آباد پارکینگ‌دار خرید)..."
+                       @bind="descriptiveQuery"
+                       @bind:event="oninput"
+                       @bind:after="ResetToFirstPage"
+                       class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl py-3.5 pr-11 pl-10 text-xs sm:text-sm text-lajevard dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+
+                <svg class="w-5 h-5 absolute right-4 top-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+
+                @if (!string.IsNullOrEmpty(descriptiveQuery))
+                {
+                    <button @onclick="ClearDescriptiveSearch" class="absolute left-3 top-3.5 text-gray-400 hover:text-red-500 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                }
+            </div>
+
+            <!-- دکمه باز/بستن فیلتر پیشرفته -->
+            <button @onclick="() => isAdvancedOpen = !isAdvancedOpen"
+                    class="px-4 py-3.5 rounded-2xl border transition-all flex items-center gap-2 font-bold text-xs sm:text-sm @(isAdvancedOpen ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20" : "bg-gray-50 dark:bg-white/5 text-lajevard dark:text-white border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10")">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+                <span class="hidden sm:inline">فیلتر پیشرفته</span>
+            </button>
+        </div>
+
+        <!-- فیلترهای تفصیلی (Accordion) -->
+        <div class="grid transition-all duration-300 ease-in-out overflow-hidden @(isAdvancedOpen ? "grid-rows-[1fr] opacity-100 pt-4 border-t border-gray-100 dark:border-white/5" : "grid-rows-[0fr] opacity-0")">
+            <div class="overflow-hidden space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <!-- نوع معامله -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-lajevard/70 dark:text-white/70">نوع معامله</label>
+                        <select @bind="selectedDealType" @bind:after="ResetToFirstPage" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="">همه موارد</option>
+                            <option value="فروش">خرید و فروش</option>
+                            <option value="اجاره">رهن و اجاره</option>
+                        </select>
+                    </div>
+
+                    <!-- حداقل متراژ -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-lajevard/70 dark:text-white/70">حداقل متراژ (متر)</label>
+                        <input type="number" @bind="minArea" @bind:after="ResetToFirstPage" placeholder="مثلاً: 80" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" />
+                    </div>
+
+                    <!-- تعداد خواب -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-lajevard/70 dark:text-white/70">حداقل خواب</label>
+                        <select @bind="minRooms" @bind:after="ResetToFirstPage" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="0">فرقی نمی‌کند</option>
+                            <option value="1">حداقل ۱ خواب</option>
+                            <option value="2">حداقل ۲ خواب</option>
+                            <option value="3">حداقل ۳ خواب</option>
+                            <option value="4">۴ خواب یا بیشتر</option>
+                        </select>
+                    </div>
+
+                    <!-- حداکثر قیمت -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-lajevard/70 dark:text-white/70">حداکثر قیمت (تومان)</label>
+                        <input type="number" @bind="maxPrice" @bind:after="ResetToFirstPage" placeholder="مثلاً: 25000000000" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-xs text-lajevard dark:text-white focus:outline-none focus:border-blue-500" dir="ltr" />
+                    </div>
+
+                </div>
+
+                <!-- فیلتر امکانات (تگ‌ها) -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-lajevard/70 dark:text-white/70">امکانات اختصاصی</label>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var feature in AvailableFeatures)
+                        {
+                            bool isSelected = selectedFeatures.Contains(feature);
+                            <button type="button"
+                                    @onclick="() => ToggleFeature(feature)"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all border @(isSelected ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-gray-50 dark:bg-white/5 text-lajevard/70 dark:text-white/70 border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10")">
+                                @(isSelected ? "✓ " : "")@feature
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- دکمه ریست فیلترها -->
+                <div class="flex justify-end pt-2">
+                    <button type="button" @onclick="ResetAllFilters" class="px-4 py-2 text-xs font-bold text-gray-500 hover:text-red-500 transition-colors">
+                        پاکسازی تمام فیلترها
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- نوار کنترل مرتب‌سازی و تعداد در صفحه -->
+    <!-- ========================================== -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-sormee-light px-4 py-3 rounded-2xl border border-gray-100 dark:border-white/5 text-xs">
+        <div class="flex items-center gap-2">
+            <span class="text-lajevard/60 dark:text-white/60 font-bold">مرتب‌سازی بر اساس:</span>
+            <select @bind="activeSort" @bind:after="ResetToFirstPage" class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl py-1.5 px-3 font-bold text-lajevard dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+                <option value="newest">جدیدترین فایل‌ها</option>
+                <option value="price-asc">ارزان‌ترین</option>
+                <option value="price-desc">گران‌ترین</option>
+                <option value="area-desc">بیشترین متراژ</option>
+                <option value="rooms-desc">بیشترین تعداد خواب</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="text-lajevard/60 dark:text-white/60">تعداد در صفحه:</span>
+            <select @bind="pageSize" @bind:after="ResetToFirstPage" class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl py-1.5 px-2.5 font-bold text-lajevard dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+                <option value="5">۵</option>
+                <option value="10">۱۰</option>
+                <option value="20">۲۰</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- نمایش نتایج: کارت‌های موبایل -->
+    <!-- ========================================== -->
+    <div class="flex flex-col gap-4 md:hidden">
+        @if (!PagedProperties.Any())
+        {
+            <div class="text-xs text-gray-400 bg-white dark:bg-sormee-light p-8 rounded-2xl text-center border border-dashed border-gray-200 dark:border-white/10">
+                هیچ فایلی با مشخصات درخواستی یافت نشد.
+            </div>
+        }
+        else
+        {
+            @foreach (var item in PagedProperties)
+            {
+                <div class="bg-white dark:bg-sormee-light p-3.5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm flex items-center gap-3.5">
+                    <div class="w-24 h-24 rounded-xl overflow-hidden shrink-0 relative bg-gray-100">
+                        <img src="@item.ImageUrl" class="w-full h-full object-cover" alt="@item.Title" />
+                        <span class="absolute top-1 right-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">@item.Code</span>
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-between h-24 py-0.5">
+                        <div>
+                            <div class="flex items-center justify-between gap-1">
+                                <h4 class="font-bold text-sm text-lajevard dark:text-white truncate">@item.Title</h4>
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded @(item.DealType == "فروش" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20" : "bg-blue-100 text-blue-600 dark:bg-blue-500/20")">
+                                    @item.DealType
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-lajevard/60 dark:text-white/60 truncate mt-0.5">@item.Location</p>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <span class="text-[10px] text-lajevard/50 dark:text-white/50">@item.Area متر • @item.Rooms خواب</span>
+                            <div class="font-bold text-blue-600 dark:text-blue-400 text-xs" dir="ltr">@item.PriceFormatted تومان</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- ========================================== -->
+    <!-- نمایش نتایج: جدول دسکتاپ -->
+    <!-- ========================================== -->
+    <div class="hidden md:block bg-white dark:bg-sormee-light rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5 overflow-hidden">
+        <div class="grid grid-cols-12 gap-4 p-4 border-b border-gray-100 dark:border-white/5 text-xs font-bold text-lajevard/50 dark:text-white/50 bg-gray-50/50 dark:bg-white/5">
+            <div class="col-span-4">مشخصات فایل</div>
+            <div class="col-span-2 text-center">نوع معامله</div>
+            <div class="col-span-2 text-center">متراژ و اتاق</div>
+            <div class="col-span-2 text-center">امکانات ثبت شده</div>
+            <div class="col-span-2 text-left">قیمت (تومان)</div>
+        </div>
+
+        @if (!PagedProperties.Any())
+        {
+            <div class="text-xs text-gray-400 p-12 text-center">هیچ فایلی با این شرایط جستجو پیدا نشد.</div>
+        }
+        else
+        {
+            <div class="divide-y divide-gray-100 dark:border-white/5">
+                @foreach (var item in PagedProperties)
+                {
+                    <div class="grid grid-cols-12 gap-4 p-4 items-center hover:bg-gray-50/60 dark:hover:bg-white/5 transition-colors">
+                        <div class="col-span-4 flex items-center gap-3.5">
+                            <img src="@item.ImageUrl" class="w-14 h-14 rounded-2xl object-cover shrink-0" alt="@item.Title" />
+                            <div class="truncate">
+                                <h4 class="font-bold text-sm text-lajevard dark:text-white truncate">@item.Title</h4>
+                                <p class="text-xs text-lajevard/60 dark:text-white/60 mt-0.5 truncate">@item.Location | کد: @item.Code</p>
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 flex justify-center">
+                            <span class="text-xs font-bold px-3 py-1 rounded-xl @(item.DealType == "فروش" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400" : "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400")">
+                                @item.DealType
+                            </span>
+                        </div>
+
+                        <div class="col-span-2 text-center text-xs font-bold text-lajevard/80 dark:text-white/80">
+                            @item.Area متر مربع | @item.Rooms خواب
+                        </div>
+
+                        <div class="col-span-2 flex flex-wrap justify-center gap-1">
+                            @foreach (var feat in item.Features.Take(2))
+                            {
+                                <span class="text-[10px] bg-gray-100 dark:bg-white/10 px-2 py-0.5 rounded-md text-lajevard/70 dark:text-white/70">@feat</span>
+                            }
+                            @if (item.Features.Count > 2)
+                            {
+                                <span class="text-[10px] text-gray-400">+@(item.Features.Count - 2)</span>
+                            }
+                        </div>
+
+                        <div class="col-span-2 text-left font-black text-blue-600 dark:text-blue-400 text-sm" dir="ltr">
+                            @item.PriceFormatted
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ========================================== -->
+    <!-- کنترل صفحه‌بندی (Pagination) -->
+    <!-- ========================================== -->
+    @if (TotalPages > 1)
+    {
+        <div class="flex items-center justify-between bg-white dark:bg-sormee-light px-4 py-3 rounded-2xl border border-gray-100 dark:border-white/5">
+            <button @onclick="PreviousPage"
+                    disabled="@(currentPage == 1)"
+                    class="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 dark:border-white/10 text-lajevard dark:text-white disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+                قبلی
+            </button>
+
+            <div class="flex items-center gap-1">
+                @for (int p = 1; p <= TotalPages; p++)
+                {
+                    int pageIndex = p;
+                    <button @onclick="() => GoToPage(pageIndex)"
+                            class="w-8 h-8 rounded-xl text-xs font-bold transition-all @(currentPage == pageIndex ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" : "text-lajevard/70 dark:text-white/70 hover:bg-gray-100 dark:hover:bg-white/5")">
+                        @pageIndex
+                    </button>
+                }
+            </div>
+
+            <button @onclick="NextPage"
+                    disabled="@(currentPage == TotalPages)"
+                    class="px-3.5 py-2 rounded-xl text-xs font-bold border border-gray-200 dark:border-white/10 text-lajevard dark:text-white disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+                بعدی
+            </button>
+        </div>
+    }
+
+</div>
+
+@code {
+    public class FullPropertyModel
+    {
+        public string Id { get; set; }
+        public string Code { get; set; }
+        public string Title { get; set; }
+        public string Location { get; set; }
+        public string DealType { get; set; } // فروش یا اجاره
+        public long RawPrice { get; set; }
+        public string PriceFormatted => RawPrice.ToString("N0");
+        public int Area { get; set; }
+        public int Rooms { get; set; }
+        public List<string> Features { get; set; } = new();
+        public string ImageUrl { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private string descriptiveQuery = "";
+    private bool isAdvancedOpen = false;
+
+    // فیلترهای پیشرفته
+    private string selectedDealType = "";
+    private int? minArea = null;
+    private int minRooms = 0;
+    private long? maxPrice = null;
+    private List<string> selectedFeatures = new();
+
+    private List<string> AvailableFeatures = new() { "پارکینگ", "آسانسور", "انباری", "بالکن", "روف‌گاردن", "استخر" };
+
+    // مرتب‌سازی و صفحه‌بندی
+    private string activeSort = "newest";
+    private int currentPage = 1;
+    private int pageSize = 5;
+
+    // داده‌های نمونه (Mock Database)
+    private static List<FullPropertyModel> MasterDatabase = new()
+    {
+        new FullPropertyModel { Id = "1", Code = "1001", Title = "آپارتمان نوساز کلید نخورده", Location = "تهران، سعادت‌آباد", DealType = "فروش", RawPrice = 14500000000, Area = 125, Rooms = 2, Features = new() { "پارکینگ", "آسانسور", "انباری" }, ImageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-1) },
+        new FullPropertyModel { Id = "2", Code = "1002", Title = "ویلای دوبلکس استخردار", Location = "مازندران، متل قو", DealType = "فروش", RawPrice = 32000000000, Area = 380, Rooms = 4, Features = new() { "پارکینگ", "استخر", "روف‌گاردن" }, ImageUrl = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-5) },
+        new FullPropertyModel { Id = "3", Code = "1003", Title = "پنت‌هاوس مجلل دید ابدی", Location = "تهران، فرشته", DealType = "فروش", RawPrice = 75000000000, Area = 420, Rooms = 4, Features = new() { "پارکینگ", "آسانسور", "انباری", "استخر", "روف‌گاردن" }, ImageUrl = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-2) },
+        new FullPropertyModel { Id = "4", Code = "1004", Title = "واحد اداری بر اصلی", Location = "تهران، میرداماد", DealType = "اجاره", RawPrice = 1200000000, Area = 95, Rooms = 1, Features = new() { "آسانسور", "انباری" }, ImageUrl = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-10) },
+        new FullPropertyModel { Id = "5", Code = "1005", Title = "آپارتمان خوش‌نقشه نورگیر", Location = "تهران، پونک", DealType = "فروش", RawPrice = 8900000000, Area = 85, Rooms = 2, Features = new() { "پارکینگ", "انباری", "بالکن" }, ImageUrl = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-3) },
+        new FullPropertyModel { Id = "6", Code = "1006", Title = "خانه ویلایی دنج", Location = "کرج، مهرشهر", DealType = "فروش", RawPrice = 19000000000, Area = 260, Rooms = 3, Features = new() { "پارکینگ", "انباری", "بالکن" }, ImageUrl = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-4) },
+        new FullPropertyModel { Id = "7", Code = "1007", Title = "آپارتمان تک‌واحدی آرام", Location = "تهران، گیشا", DealType = "اجاره", RawPrice = 2500000000, Area = 110, Rooms = 3, Features = new() { "پارکینگ", "آسانسور", "بالکن" }, ImageUrl = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=300&q=80", CreatedAt = DateTime.Now.AddDays(-8) }
+    };
+
+    private List<FullPropertyModel> FilteredProperties
+    {
+        get
+        {
+            var query = MasterDatabase.AsEnumerable();
+
+            // ۱. پردازش جستجوی توصیفی (Natural Language Filter)
+            if (!string.IsNullOrWhiteSpace(descriptiveQuery))
+            {
+                var terms = descriptiveQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var term in terms)
+                {
+                    if (term == "خرید" || term == "فروش")
+                    {
+                        query = query.Where(p => p.DealType == "فروش");
+                    }
+                    else if (term == "اجاره" || term == "رهن")
+                    {
+                        query = query.Where(p => p.DealType == "اجاره");
+                    }
+                    else if (term.Contains("خواب"))
+                    {
+                        var digitStr = new string(term.Where(char.IsDigit).ToArray());
+                        if (int.TryParse(digitStr, out int roomCount))
+                        {
+                            query = query.Where(p => p.Rooms >= roomCount);
+                        }
+                    }
+                    else
+                    {
+                        query = query.Where(p => p.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+                                              || p.Location.Contains(term, StringComparison.OrdinalIgnoreCase)
+                                              || p.Code.Contains(term, StringComparison.OrdinalIgnoreCase)
+                                              || p.Features.Any(f => f.Contains(term, StringComparison.OrdinalIgnoreCase)));
+                    }
+                }
+            }
+
+            // ۲. اعمال فیلترهای پیشرفته
+            if (!string.IsNullOrEmpty(selectedDealType))
+                query = query.Where(p => p.DealType == selectedDealType);
+
+            if (minArea.HasValue && minArea.Value > 0)
+                query = query.Where(p => p.Area >= minArea.Value);
+
+            if (minRooms > 0)
+                query = query.Where(p => p.Rooms >= minRooms);
+
+            if (maxPrice.HasValue && maxPrice.Value > 0)
+                query = query.Where(p => p.RawPrice <= maxPrice.Value);
+
+            if (selectedFeatures.Any())
+                query = query.Where(p => selectedFeatures.All(f => p.Features.Contains(f)));
+
+            // ۳. مرتب‌سازی
+            query = activeSort switch
+            {
+                "price-asc" => query.OrderBy(p => p.RawPrice),
+                "price-desc" => query.OrderByDescending(p => p.RawPrice),
+                "area-desc" => query.OrderByDescending(p => p.Area),
+                "rooms-desc" => query.OrderByDescending(p => p.Rooms),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            return query.ToList();
+        }
+    }
+
+    // کنترل صفحه‌بندی
+    private int TotalPages => (int)Math.Ceiling((double)FilteredProperties.Count / pageSize);
+
+    private List<FullPropertyModel> PagedProperties => FilteredProperties
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+
+    private void ResetToFirstPage()
+    {
+        currentPage = 1;
+    }
+
+    private void PreviousPage()
+    {
+        if (currentPage > 1) currentPage--;
+    }
+
+    private void NextPage()
+    {
+        if (currentPage < TotalPages) currentPage++;
+    }
+
+    private void GoToPage(int pageIndex)
+    {
+        currentPage = pageIndex;
+    }
+
+    private void ToggleFeature(string feature)
+    {
+        if (selectedFeatures.Contains(feature))
+            selectedFeatures.Remove(feature);
+        else
+            selectedFeatures.Add(feature);
+
+        ResetToFirstPage();
+    }
+
+    private void ClearDescriptiveSearch()
+    {
+        descriptiveQuery = "";
+        ResetToFirstPage();
+    }
+
+    private void ResetAllFilters()
+    {
+        descriptiveQuery = "";
+        selectedDealType = "";
+        minArea = null;
+        minRooms = 0;
+        maxPrice = null;
+        selectedFeatures.Clear();
+        activeSort = "newest";
+        ResetToFirstPage();
+    }
+}

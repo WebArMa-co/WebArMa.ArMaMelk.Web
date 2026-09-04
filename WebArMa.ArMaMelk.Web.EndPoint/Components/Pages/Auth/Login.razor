@@ -1,0 +1,191 @@
+﻿@page "/login"
+@layout AuthLayout
+@inject NavigationManager Navigation
+
+<div class="bg-white/80 dark:bg-sormee-light/80 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 dark:shadow-none border border-white/50 dark:border-white/10 space-y-8 transition-all">
+
+    <!-- هدر فرم -->
+    <div class="text-center space-y-3">
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-blue-600/30 mb-2 transform -rotate-3">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+        </div>
+        <h1 class="text-2xl font-black text-lajevard dark:text-white">
+            @(step == 1 ? "ورود به پنل فایلینگ" : "تایید شماره موبایل")
+        </h1>
+        <p class="text-xs text-lajevard/60 dark:text-white/60 font-medium">
+            @(step == 1 ? "برای ورود یا ثبت‌نام، شماره موبایل خود را وارد کنید" : $"کد تایید به شماره {phoneNumber} پیامک شد")
+        </p>
+    </div>
+
+    <!-- فرم مرحله ۱: دریافت شماره موبایل -->
+    @if (step == 1)
+    {
+        <form @onsubmit="SendOtp" class="space-y-6 animate-fade-in">
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-lajevard/80 dark:text-white/80 block pr-1">شماره موبایل</label>
+                <div class="relative">
+                    <input type="tel"
+                           @bind="phoneNumber"
+                           placeholder="09123456789"
+                           class="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl py-3.5 px-4 text-sm text-lajevard dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-bold text-center tracking-widest shadow-inner"
+                           dir="ltr"
+                           maxlength="11"
+                           required />
+                </div>
+            </div>
+
+            <button type="submit" disabled="@isProcessing" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-600/30 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2">
+                @if (isProcessing)
+                {
+                    <svg class="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>درحال ارسال...</span>
+                }
+                else
+                {
+                    <span>ارسال کد تایید</span>
+                    <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                }
+            </button>
+        </form>
+    }
+
+    <!-- فرم مرحله ۲: دریافت کد OTP -->
+    @if (step == 2)
+    {
+        <form @onsubmit="VerifyOtp" class="space-y-6 animate-fade-in">
+            <div class="space-y-1.5 text-center">
+                <label class="text-xs font-bold text-lajevard/80 dark:text-white/80 block">کد ۵ رقمی</label>
+                <!-- ورودی کد با فاصله زیاد بین حروف برای حس بهتر -->
+                <input type="tel"
+                       @bind="otpCode"
+                       placeholder="- - - - -"
+                       class="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl py-4 text-2xl text-lajevard dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-black text-center tracking-[0.5em] shadow-inner"
+                       dir="ltr"
+                       maxlength="5"
+                       autocomplete="one-time-code"
+                       required />
+            </div>
+
+            <!-- وضعیت تایمر و ویرایش شماره -->
+            <div class="flex items-center justify-between text-xs font-bold px-1">
+                <button type="button" @onclick="ChangePhoneNumber" class="text-gray-500 hover:text-blue-600 transition-colors">
+                    اصلاح شماره
+                </button>
+
+                @if (countdown > 0)
+                {
+                    <span class="text-blue-600 dark:text-blue-400 font-mono text-[13px]" dir="ltr">00:@countdown.ToString("D2")</span>
+                }
+                else
+                {
+                    <button type="button" @onclick="ResendOtp" class="text-blue-600 hover:underline">
+                        ارسال مجدد کد
+                    </button>
+                }
+            </div>
+
+            <button type="submit" disabled="@(isProcessing || string.IsNullOrWhiteSpace(otpCode) || otpCode.Length < 5)" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-black shadow-lg shadow-emerald-600/30 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2">
+                @if (isProcessing)
+                {
+                    <svg class="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>در حال بررسی...</span>
+                }
+                else
+                {
+                    <span>تایید و ورود</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                }
+            </button>
+        </form>
+    }
+
+    <!-- لینک ثبت‌نام -->
+    <div class="text-center pt-2 border-t border-gray-100 dark:border-white/5">
+        <p class="text-xs font-bold text-lajevard/70 dark:text-white/70">
+            حساب کاربری ندارید؟
+            <a href="/register" class="text-blue-600 dark:text-blue-400 hover:underline">ثبت‌نام مشاور جدید</a>
+        </p>
+    </div>
+
+</div>
+
+@code {
+    private int step = 1;
+    private bool isProcessing = false;
+
+    private string phoneNumber = "";
+    private string otpCode = "";
+
+    private int countdown = 0;
+    private CancellationTokenSource? cts;
+
+    private async Task SendOtp()
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length < 10) return;
+
+        isProcessing = true;
+        // شبیه‌سازی درخواست ارسال پیامک
+        await Task.Delay(1000);
+        isProcessing = false;
+
+        step = 2;
+        StartCountdown(59); // شروع تایمر یک دقیقه‌ای
+    }
+
+    private void StartCountdown(int seconds)
+    {
+        countdown = seconds;
+        cts?.Cancel();
+        cts = new CancellationTokenSource();
+        _ = RunTimer(cts.Token);
+    }
+
+    private async Task RunTimer(CancellationToken token)
+    {
+        while (countdown > 0 && !token.IsCancellationRequested)
+        {
+            await Task.Delay(1000, token);
+            countdown--;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResendOtp()
+    {
+        otpCode = "";
+        await SendOtp();
+    }
+
+    private void ChangePhoneNumber()
+    {
+        cts?.Cancel();
+        otpCode = "";
+        step = 1;
+    }
+
+    private async Task VerifyOtp()
+    {
+        isProcessing = true;
+        // شبیه‌سازی بررسی کد در سرور
+        await Task.Delay(1500);
+        isProcessing = false;
+        cts?.Cancel();
+
+        // لاگین موفق -> انتقال به داشبورد
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+    }
+}

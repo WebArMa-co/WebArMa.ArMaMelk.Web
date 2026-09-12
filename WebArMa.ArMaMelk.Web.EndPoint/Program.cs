@@ -13,9 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddHttpClient<IOTPService, OTPService>(client =>
@@ -45,6 +43,7 @@ builder.Services.AddAuthentication("ArMaMelk").AddCookie("ArMaMelk", options =>
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();
 

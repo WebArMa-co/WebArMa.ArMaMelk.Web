@@ -1,6 +1,19 @@
-﻿@page "/login"
+﻿@using System.Text.RegularExpressions
+@using WebArMa.ArMaMelk.Web.Application.Auth.Services
+@using WebArMa.ArMaMelk.Web.Application.OTP.Services
+@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+
 @layout AuthLayout
-@inject NavigationManager Navigation
+
+@page "/login"
+
+@implements IDisposable
+
+@inject NavigationManager navigation
+@inject IAuthService authService
+@inject IOTPService oTPService
+@inject ToastService toastService
+@inject IHttpContextAccessor httpContextAccessor
 
 <div class="bg-white/80 dark:bg-sormee-light/80 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 dark:shadow-none border border-white/50 dark:border-white/10 space-y-8 transition-all">
 
@@ -57,7 +70,7 @@
     <!-- فرم مرحله ۲: دریافت کد OTP -->
     @if (step == 2)
     {
-        <form @onsubmit="VerifyOtp" class="space-y-6 animate-fade-in">
+        <form @onsubmit="LoginAsync" class="space-y-6 animate-fade-in">
             <div class="space-y-1.5 text-center">
                 <label class="text-xs font-bold text-lajevard/80 dark:text-white/80 block">کد ۵ رقمی</label>
                 <!-- ورودی کد با فاصله زیاد بین حروف برای حس بهتر -->
@@ -118,6 +131,14 @@
 </div>
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "Token")]
+    public string? Token { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "RefreshToken")]
+    public string? RefreshToken { get; set; }
+
     private int step = 1;
     private bool isProcessing = false;
 
@@ -125,19 +146,51 @@
     private string otpCode = "";
 
     private int countdown = 0;
-    private CancellationTokenSource? cts;
+    private CancellationTokenSource cts = new();
 
-    private async Task SendOtp()
+    private static readonly Regex PhoneRegex = new(@"^09\d{9}$", RegexOptions.Compiled);
+
+    protected override void OnInitialized()
     {
-        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length < 10) return;
+        if (Token != null && RefreshToken != null)
+        {
+            httpContextAccessor.HttpContext?.Response.Cookies.Append("access_token", Token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Expires = DateTimeOffset.UtcNow.AddDays(30)
+            });
+            httpContextAccessor.HttpContext?.Response.Cookies.Append("refresh_token", RefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Expires = DateTimeOffset.UtcNow.AddDays(30)
+            });
+
+            navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        if (!PhoneRegex.IsMatch(phoneNumber))
+        {
+            toastService.ShowError("شماره موبایل باید به صورت 09xxxxxxxxx باشد.");
+            return;
+        }
 
         isProcessing = true;
-        // شبیه‌سازی درخواست ارسال پیامک
-        await Task.Delay(1000);
+        var result = await authService.LoginAsync(phoneNumber, otpCode, cts.Token);
         isProcessing = false;
 
-        step = 2;
-        StartCountdown(59); // شروع تایمر یک دقیقه‌ای
+        if (result != null)
+        {
+            navigation.NavigateTo($"?{nameof(Token)}={result.Token}&{nameof(RefreshToken)}={result.RefreshToken}", forceLoad: true);
+        }
     }
 
     private void StartCountdown(int seconds)
@@ -171,16 +224,14 @@
         step = 1;
     }
 
-    private async Task VerifyOtp()
+    private async Task SendOtp()
     {
         isProcessing = true;
-        // شبیه‌سازی بررسی کد در سرور
-        await Task.Delay(1500);
+        await oTPService.RequestOTPAsync(phoneNumber, cts.Token);
         isProcessing = false;
-        cts?.Cancel();
 
-        // لاگین موفق -> انتقال به داشبورد
-        Navigation.NavigateTo("/");
+        step = 2;
+        StartCountdown(59);
     }
 
     public void Dispose()

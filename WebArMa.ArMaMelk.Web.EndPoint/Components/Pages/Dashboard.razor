@@ -1,9 +1,11 @@
-﻿@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using WebArMa.ArMaMelk.Web.Application.Toast.Services
 
 @page "/Dashboard"
 
-@inject ToastService ToastService
-@inject NavigationManager Navigation
+@inject ToastService toastService
+@inject NavigationManager navigation
+@inject AuthenticationStateProvider authenticationStateProvider
 
 <div class="w-full max-w-6xl mx-auto p-4 md:p-6 pb-36 space-y-6">
 
@@ -17,13 +19,13 @@
 
         <div class="flex items-center gap-2 relative z-10">
             <button type="button"
-                    @onclick='() => Navigation.NavigateTo("/add-property")'
+                    @onclick='() => navigation.NavigateTo("/add-property")'
                     class="px-4 py-3 bg-white text-blue-600 rounded-2xl text-xs font-black shadow-md hover:bg-blue-50 transition-all active:scale-95 flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
                 ثبت فایل جدید
             </button>
             <button type="button"
-                    @onclick='() => Navigation.NavigateTo("/reminders")'
+                    @onclick='() => navigation.NavigateTo("/reminders")'
                     class="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 rounded-2xl text-xs font-bold transition-all active:scale-95">
                 برنامه کاری
             </button>
@@ -70,7 +72,7 @@
                 💰
             </div>
             <div>
-                <span class="text-[11px] text-lajevard/50 dark:text-white/50 block">ارزش کل فایلینگ</span>
+                <spaboardn class="text-[11px] text-lajevard/50 dark:text-white/50 block">ارزش کل فایلینگ</spaboardn>
                 <span class="text-lg font-black text-purple-600">۱۸۰ میلیارد</span>
             </div>
         </div>
@@ -86,7 +88,7 @@
                     <span class="text-xl">📅</span>
                     <h3 class="font-bold text-sm text-lajevard dark:text-white">برنامه کاری امروز</h3>
                 </div>
-                <button type="button" @onclick='() => Navigation.NavigateTo("/reminders")' class="text-xs text-blue-600 font-bold hover:underline">
+                <button type="button" @onclick='() => navigation.NavigateTo("/reminders")' class="text-xs text-blue-600 font-bold hover:underline">
                     مشاهده تقویم کامل ➔
                 </button>
             </div>
@@ -125,7 +127,7 @@
                     <span class="text-xl">🗂️</span>
                     <h3 class="font-bold text-sm text-lajevard dark:text-white">دسته‌بندی‌ها و پوشه‌ها</h3>
                 </div>
-                <button type="button" @onclick='() => Navigation.NavigateTo("/folders")' class="text-xs text-blue-600 font-bold hover:underline">
+                <button type="button" @onclick='() => navigation.NavigateTo("/folders")' class="text-xs text-blue-600 font-bold hover:underline">
                     همه پوشه‌ها ➔
                 </button>
             </div>
@@ -153,7 +155,7 @@
                 <span class="text-xl">✨</span>
                 <h3 class="font-bold text-sm text-lajevard dark:text-white">جدیدترین فایل‌های ثبت‌شده</h3>
             </div>
-            <button type="button" @onclick='() => Navigation.NavigateTo("/all-properties")' class="text-xs text-blue-600 font-bold hover:underline">
+            <button type="button" @onclick='() => navigation.NavigateTo("/all-properties")' class="text-xs text-blue-600 font-bold hover:underline">
                 جستجو در کل فایل‌ها (@recentProperties.Count) ➔
             </button>
         </div>
@@ -239,14 +241,27 @@
         new PropertyCard { Id = "3", Code = "1047", Title = "واحد اداری موقعیت برتر", Location = "تهران، میرداماد", DealType = "اجاره", Area = 95, Rooms = 1, RawPrice = 1200000000, ImageUrl = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=400&q=80" }
     };
 
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            navigation.NavigateTo("/Login", forceLoad: true);
+            return;
+        }
+    }
+
     private void NavigateToFolder(string folderId)
     {
-        Navigation.NavigateTo($"/folders/{folderId}");
+        navigation.NavigateTo($"/folders/{folderId}");
     }
 
     private void NavigateToProperty(string propId)
     {
-        Navigation.NavigateTo($"/property/{propId}");
+        navigation.NavigateTo($"/property/{propId}");
     }
 
     private void HandleFabAction(FabSpeedDial.FabAction action)
@@ -254,16 +269,16 @@
         switch (action)
         {
             case FabSpeedDial.FabAction.NewProperty:
-                ToastService.ShowInfo("در حال باز کردن فرم ثبت ملک...");
+                toastService.ShowInfo("در حال باز کردن فرم ثبت ملک...");
                 // NavigationManager.NavigateTo("/add-property");
                 break;
 
             case FabSpeedDial.FabAction.NewReminder:
-                ToastService.ShowSuccess("تقویم یادآوری‌ها باز شد.");
+                toastService.ShowSuccess("تقویم یادآوری‌ها باز شد.");
                 break;
 
             case FabSpeedDial.FabAction.NewRequest:
-                ToastService.ShowInfo("فرم ثبت تقاضای مشتری باز شد.");
+                toastService.ShowInfo("فرم ثبت تقاضای مشتری باز شد.");
                 break;
         }
     }

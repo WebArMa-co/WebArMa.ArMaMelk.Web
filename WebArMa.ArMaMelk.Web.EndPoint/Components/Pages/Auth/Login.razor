@@ -1,4 +1,5 @@
 ﻿@using System.Text.RegularExpressions
+@using WebArMa.ArMaMelk.Web.Application.Auth.DTOs
 @using WebArMa.ArMaMelk.Web.Application.Auth.Services
 @using WebArMa.ArMaMelk.Web.Application.OTP.Services
 @using WebArMa.ArMaMelk.Web.Application.Toast.Services
@@ -10,9 +11,10 @@
 @implements IDisposable
 
 @inject NavigationManager navigation
+@inject ToastService toastService
+@inject HttpClient httpClient
 @inject IAuthService authService
 @inject IOTPService oTPService
-@inject ToastService toastService
 @inject IHttpContextAccessor httpContextAccessor
 
 <div class="bg-white/80 dark:bg-sormee-light/80 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] shadow-xl shadow-blue-900/5 dark:shadow-none border border-white/50 dark:border-white/10 space-y-8 transition-all">
@@ -70,21 +72,20 @@
     <!-- فرم مرحله ۲: دریافت کد OTP -->
     @if (step == 2)
     {
-        <form @onsubmit="LoginAsync" class="space-y-6 animate-fade-in">
+        <form method="post" action="/auth/login" class="space-y-6 animate-fade-in">
+
+            <AntiforgeryToken />
+
+            <input type="hidden" name="PhoneNumber" value="@phoneNumber" />
+
             <div class="space-y-1.5 text-center">
-                <label class="text-xs font-bold text-lajevard/80 dark:text-white/80 block">کد ۵ رقمی</label>
-                <!-- ورودی کد با فاصله زیاد بین حروف برای حس بهتر -->
-                <input type="tel"
-                       @bind="otpCode"
-                       placeholder="- - - - -"
-                       class="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl py-4 text-2xl text-lajevard dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-black text-center tracking-[0.5em] shadow-inner"
-                       dir="ltr"
-                       maxlength="5"
-                       autocomplete="one-time-code"
-                       required />
+                <label class="text-xs font-bold text-lajevard/80 dark:text-white/80 block">
+                    کد ۵ رقمی
+                </label>
+
+                <input type="tel" name="Code" @bind="otpCode" placeholder="- - - - -" class="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl py-4 text-2xl text-lajevard dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-black text-center tracking-[0.5em] shadow-inner" dir="ltr" maxlength="5" autocomplete="one-time-code" required />
             </div>
 
-            <!-- وضعیت تایمر و ویرایش شماره -->
             <div class="flex items-center justify-between text-xs font-bold px-1">
                 <button type="button" @onclick="ChangePhoneNumber" class="text-gray-500 hover:text-blue-600 transition-colors">
                     اصلاح شماره
@@ -92,7 +93,9 @@
 
                 @if (countdown > 0)
                 {
-                    <span class="text-blue-600 dark:text-blue-400 font-mono text-[13px]" dir="ltr">00:@countdown.ToString("D2")</span>
+                    <span class="text-blue-600 dark:text-blue-400 font-mono text-[13px]" dir="ltr">
+                        00:@countdown.ToString("D2")
+                    </span>
                 }
                 else
                 {
@@ -103,19 +106,12 @@
             </div>
 
             <button type="submit" disabled="@(isProcessing || string.IsNullOrWhiteSpace(otpCode) || otpCode.Length < 5)" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-black shadow-lg shadow-emerald-600/30 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2">
-                @if (isProcessing)
-                {
-                    <svg class="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>در حال بررسی...</span>
-                }
-                else
-                {
-                    <span>تایید و ورود</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                }
+
+                <span>تایید و ورود</span>
+
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
             </button>
         </form>
     }
@@ -131,14 +127,6 @@
 </div>
 
 @code {
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "Token")]
-    public string? Token { get; set; }
-
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "RefreshToken")]
-    public string? RefreshToken { get; set; }
-
     private int step = 1;
     private bool isProcessing = false;
 
@@ -149,49 +137,6 @@
     private CancellationTokenSource cts = new();
 
     private static readonly Regex PhoneRegex = new(@"^09\d{9}$", RegexOptions.Compiled);
-
-    protected override void OnInitialized()
-    {
-        if (Token != null && RefreshToken != null)
-        {
-            httpContextAccessor.HttpContext?.Response.Cookies.Append("access_token", Token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Lax,
-                Path = "/",
-                Expires = DateTimeOffset.UtcNow.AddDays(30)
-            });
-            httpContextAccessor.HttpContext?.Response.Cookies.Append("refresh_token", RefreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Lax,
-                Path = "/",
-                Expires = DateTimeOffset.UtcNow.AddDays(30)
-            });
-
-            navigation.NavigateTo("/");
-        }
-    }
-
-    private async Task LoginAsync()
-    {
-        if (!PhoneRegex.IsMatch(phoneNumber))
-        {
-            toastService.ShowError("شماره موبایل باید به صورت 09xxxxxxxxx باشد.");
-            return;
-        }
-
-        isProcessing = true;
-        var result = await authService.LoginAsync(phoneNumber, otpCode, cts.Token);
-        isProcessing = false;
-
-        if (result != null)
-        {
-            navigation.NavigateTo($"?{nameof(Token)}={result.Token}&{nameof(RefreshToken)}={result.RefreshToken}", forceLoad: true);
-        }
-    }
 
     private void StartCountdown(int seconds)
     {

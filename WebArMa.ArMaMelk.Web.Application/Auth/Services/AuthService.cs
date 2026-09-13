@@ -5,17 +5,23 @@ namespace WebArMa.ArMaMelk.Web.Application.Auth.Services;
 
 public class AuthService(HttpClient httpClient) : IAuthService
 {
-	public async Task<TokenDTO?> LoginAsync(string phoneNumber, string code, CancellationToken cancellationToken = default)
-	{
+    public async Task<TokenDTO?> LoginAsync(string phoneNumber, string code, CancellationToken cancellationToken = default)
+    {
+        var request = new
+        {
+            UserName = phoneNumber,
+            Code = code
+        };
 
-		var request = new
-		{
-			UserName = phoneNumber,
-			Code = code
-		};
+        var response = await httpClient.PostAsJsonAsync("api/v1/Auth/Login", request, cancellationToken);
+        var token = await response.Content.ReadFromJsonAsync<TokenDTO>(cancellationToken);
+        return token;
+    }
 
-		var response = await httpClient.PostAsJsonAsync("api/v1/Auth/Login", request, cancellationToken);
-		var token = await response.Content.ReadFromJsonAsync<TokenDTO>(cancellationToken);
-		return token;
-	}
+    public async Task<TokenDTO?> LoginAsync(CancellationToken cancellationToken)
+    {
+        var response = await httpClient.PostAsJsonAsync("api/v1/Auth/Login", string.Empty, cancellationToken);
+        var token = await response.Content.ReadFromJsonAsync<TokenDTO>(cancellationToken);
+        return token;
+    }
 }

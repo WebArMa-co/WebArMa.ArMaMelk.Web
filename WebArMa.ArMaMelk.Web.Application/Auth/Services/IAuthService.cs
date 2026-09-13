@@ -5,4 +5,5 @@ namespace WebArMa.ArMaMelk.Web.Application.Auth.Services;
 public interface IAuthService
 {
 	Task<TokenDTO?> LoginAsync(string phoneNumber, string code, CancellationToken cancellationToken);
+	Task<TokenDTO?> LoginAsync(CancellationToken cancellationToken);
 }

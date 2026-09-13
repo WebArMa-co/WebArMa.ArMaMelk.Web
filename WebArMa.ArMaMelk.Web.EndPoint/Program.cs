@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using WebArMa.ArMaMelk.Web.Application._Shared.Delegates;
 using WebArMa.ArMaMelk.Web.Application._Shared.Helpers;
 using WebArMa.ArMaMelk.Web.Application.Auth.DTOs;
 using WebArMa.ArMaMelk.Web.Application.Auth.Services;
@@ -16,17 +16,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToastService>();
-builder.Services.AddHttpClient<IOTPService, OTPService>(client =>
-{
-    client.BaseAddress = new Uri(
-        builder.Configuration["ApiSettings:BaseUrl"]!);
-});
-
-builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
-{
-    client.BaseAddress = new Uri(
-        builder.Configuration["ApiSettings:BaseUrl"]!);
-});
+builder.Services.AddTransient<ApiAuthenticationHandler>();
+builder.Services.AddHttpClient("Api", client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"]!);
+    }).AddHttpMessageHandler<ApiAuthenticationHandler>();
+builder.Services.AddHttpClient<IOTPService, OTPService>();
+builder.Services.AddHttpClient<IAuthService, AuthService>();
 
 builder.Services.AddAuthentication("ArMaMelk").AddCookie("ArMaMelk", options =>
     {
@@ -63,12 +59,12 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapPost("/auth/login", async ([FromForm] LoginDTO request, HttpContext httpContext, CancellationToken cancellationToken, IAuthService authService) =>
+app.MapPost("/Auth/Login", async ([FromForm] LoginDTO request, HttpContext httpContext, CancellationToken cancellationToken, IAuthService authService) =>
 {
     var result = await authService.LoginAsync(request.PhoneNumber, request.Code, cancellationToken);
     if (result is null)
     {
-        return Results.Redirect("/login?error=invalid");
+        return Results.Redirect("/Login?error=invalid");
     }
 
     var principal = ClaimsPrincipalFactory.Create(result.Token);
@@ -89,6 +85,34 @@ app.MapPost("/auth/login", async ([FromForm] LoginDTO request, HttpContext httpC
 
     await httpContext.SignInAsync("ArMaMelk", principal, properties);
     return Results.Redirect("/");
+});
+
+app.MapPost("/Auth/RefreshLogin", async (HttpContext httpContext, CancellationToken cancellationToken, IAuthService authService) =>
+{
+    var result = await authService.LoginAsync(cancellationToken);
+    if (result is null)
+    {
+        return Results.Redirect("/Login?error=invalid");
+    }
+
+    var principal = ClaimsPrincipalFactory.Create(result.Token);
+    var properties = new AuthenticationProperties();
+    properties.StoreTokens(
+    [
+        new AuthenticationToken
+        {
+            Name = "access_token",
+            Value = result.Token
+        },
+        new AuthenticationToken
+        {
+            Name = "refresh_token",
+            Value = result.RefreshToken
+        }
+    ]);
+
+    await httpContext.SignInAsync("ArMaMelk", principal, properties);
+    return Results.Ok();
 });
 
 app.UseAuthentication();

@@ -5,6 +5,7 @@ using WebArMa.ArMaMelk.Web.Application._Shared.Helpers;
 using WebArMa.ArMaMelk.Web.Application.Auth.DTOs;
 using WebArMa.ArMaMelk.Web.Application.Auth.Services;
 using WebArMa.ArMaMelk.Web.Application.OTP.Services;
+using WebArMa.ArMaMelk.Web.Application.Profile.Services;
 using WebArMa.ArMaMelk.Web.Application.Toast.Services;
 using WebArMa.ArMaMelk.Web.EndPoint.Components;
 
@@ -18,11 +19,24 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddTransient<ApiAuthenticationHandler>();
 builder.Services.AddHttpClient("Api", client =>
-    {
-        client.BaseAddress = new Uri(builder.Configuration["Api:BaseUrl"]!);
-    }).AddHttpMessageHandler<ApiAuthenticationHandler>();
-builder.Services.AddHttpClient<IOTPService, OTPService>();
-builder.Services.AddHttpClient<IAuthService, AuthService>();
+{
+	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+}).AddHttpMessageHandler<ApiAuthenticationHandler>();
+
+builder.Services.AddHttpClient<IOTPService, OTPService>(client =>
+{
+	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+});
+
+builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
+{
+	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+});
+builder.Services.AddHttpClient<IProfileService, ProfileService>(client =>
+{
+	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+})
+	.AddHttpMessageHandler<ApiAuthenticationHandler>();
 
 builder.Services.AddAuthentication("ArMaMelk").AddCookie("ArMaMelk", options =>
     {

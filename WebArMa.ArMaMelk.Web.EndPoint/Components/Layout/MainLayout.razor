@@ -1,4 +1,8 @@
-﻿@inherits LayoutComponentBase
+﻿@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+
+
+@inherits LayoutComponentBase
 @inject NavigationManager Navigation
 
 <div class="flex h-[100dvh] w-full overflow-hidden bg-persian-pattern text-lajevard dark:text-gray-100 transition-colors duration-300">
@@ -68,7 +72,7 @@
                     <button type="button" @onclick="ToggleProfileMenu" class="w-10 h-10 lg:w-11 lg:h-11 rounded-[14px] bg-blue-50 dark:bg-white/5 border border-blue-600/20 dark:border-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black shadow-sm hover:ring-2 hover:ring-blue-500/50 transition-all overflow-hidden shrink-0">
                         <!-- اگر عکس داشت، img را فعال کنید، وگرنه حرف اول اسم نشان داده می‌شود -->
                         @* <img src="/images/avatar.jpg" class="w-full h-full object-cover" /> *@
-                        <span class="text-sm lg:text-base">آ.م</span>
+                        <span class="text-sm lg:text-base">@userInitials</span>
                     </button>
 
                     <!-- کشوی پروفایل -->
@@ -81,8 +85,8 @@
 
                             <!-- مشخصات کاربر -->
                             <div class="px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
-                                <p class="text-sm font-bold text-lajevard dark:text-white">آرش محمودی</p>
-                                <p class="text-[10px] text-lajevard/60 dark:text-white/60 mt-0.5">مدیر پنل • املاک پایتخت</p>
+                                <p class="text-sm font-bold text-lajevard dark:text-white">@userName</p>
+                                <p class="text-[10px] text-lajevard/60 dark:text-white/60 mt-0.5">@userSubtitle</p>
                             </div>
 
                             <div class="p-2 space-y-1">
@@ -117,18 +121,51 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     private bool isMobileSearchOpen = false;
     private bool isProfileMenuOpen = false;
 
-    private void ToggleProfileMenu()
+    private string userName = "کاربر";
+    private string userInitials = "?";
+    private string userSubtitle = "";
+
+    protected override async Task OnInitializedAsync()
     {
-        isProfileMenuOpen = !isProfileMenuOpen;
+        if (AuthState is null)
+            return;
+
+        var authState = await AuthState;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var givenName = user.FindFirst("given_name")?.Value;
+            var familyName = user.FindFirst("family_name")?.Value;
+            var phone = user.FindFirst("phone_number")?.Value;
+
+            var fullName = string.Join(" ", new[] { givenName, familyName }
+                .Where(n => !string.IsNullOrWhiteSpace(n) && n != phone));
+
+            userName = !string.IsNullOrWhiteSpace(fullName) ? fullName : (phone ?? "کاربر");
+            userSubtitle = phone ?? "";
+            userInitials = GetInitials(userName);
+        }
     }
 
-    private void CloseProfileMenu()
+    private static string GetInitials(string fullName)
     {
-        isProfileMenuOpen = false;
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "?";
+        if (parts.Length == 1)
+            return parts[0].Length >= 2 ? parts[0][..2] : parts[0][..1];
+        return $"{parts[0][..1]}.{parts[^1][..1]}";
     }
+
+    private void ToggleProfileMenu() => isProfileMenuOpen = !isProfileMenuOpen;
+    private void CloseProfileMenu() => isProfileMenuOpen = false;
 
     private void NavigateTo(string url)
     {
@@ -139,7 +176,8 @@
     private void Logout()
     {
         CloseProfileMenu();
-        // منطق حذف توکن از Storage اینجا قرار می‌گیرد
         Navigation.NavigateTo("/login");
     }
 }
+
+

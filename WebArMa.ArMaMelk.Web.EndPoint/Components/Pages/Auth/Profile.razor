@@ -1,4 +1,13 @@
-﻿@page "/profile"
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using WebArMa.ArMaMelk.Web.Application.Profile.DTOs
+@using WebArMa.ArMaMelk.Web.Application.Profile.Services
+@using WebArMa.ArMaMelk.Web.Application.Toast.Services
+
+@page "/profile"
+
+@inject IProfileService ProfileService
+@inject ToastService ToastService
+@inject ToastService ToastService
 @inject NavigationManager Navigation
 
 <div class="w-full max-w-3xl mx-auto p-4 md:p-6 pb-36 space-y-6 animate-fade-in">
@@ -22,7 +31,7 @@
             <div class="w-24 h-24 rounded-3xl bg-blue-50 dark:bg-white/5 border-2 border-blue-100 dark:border-white/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-3xl shadow-inner overflow-hidden">
                 @if (string.IsNullOrEmpty(userProfile.AvatarUrl))
                 {
-                    <span>@userProfile.FullName.Substring(0, 1)</span>
+                    <span>@(string.IsNullOrEmpty(userProfile.FullName) ? "?" : userProfile.FullName.Substring(0, 1))</span>
                 }
                 else
                 {
@@ -137,19 +146,43 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     public class UserProfileModel
     {
-        public string FullName { get; set; } = "آرش محمودی";
-        public string PhoneNumber { get; set; } = "09123456789";
-        public string AgencyName { get; set; } = "املاک پایتخت";
+        public string FullName { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public string AgencyName { get; set; } = "";
         public string Email { get; set; } = "";
-        public string AvatarUrl { get; set; } = ""; // اگر خالی باشد نام اختصاری نشان داده می‌شود
+        public string AvatarUrl { get; set; } = "";
         public bool ReceiveSmsAlerts { get; set; } = true;
         public bool ReceiveNewFileAlerts { get; set; } = false;
     }
 
     private UserProfileModel userProfile = new();
     private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // شماره موبایل از توکن ورود خوانده می‌شود (غیرقابل تغییر)
+        if (AuthState is not null)
+        {
+            var authState = await AuthState;
+            var phone = authState.User.FindFirst("phone_number")?.Value;
+            if (!string.IsNullOrWhiteSpace(phone))
+                userProfile.PhoneNumber = phone;
+        }
+
+        // بقیه اطلاعات پروفایل از سرور خوانده می‌شود
+        var profile = await ProfileService.GetProfileAsync();
+        if (profile is not null)
+        {
+            userProfile.FullName = profile.FullName;
+            userProfile.AgencyName = profile.AgencyName ?? "";
+            userProfile.Email = profile.Email ?? "";
+        }
+    }
 
     private void GoBack()
     {
@@ -160,11 +193,24 @@
     {
         isSaving = true;
 
-        // شبیه‌سازی درخواست ذخیره‌سازی در دیتابیس
-        await Task.Delay(1500);
+        var request = new UpdateProfileDTO
+        {
+            FullName = userProfile.FullName,
+            AgencyName = userProfile.AgencyName,
+            Email = userProfile.Email
+        };
+
+        var success = await ProfileService.UpdateProfileAsync(request);
 
         isSaving = false;
 
-        // در صورت نیاز نمایش یک Toast موفقیت‌آمیز در اینجا قرار می‌گیرد
+        if (success)
+        {
+            ToastService.ShowSuccess("اطلاعات پروفایل با موفقیت ذخیره شد.");
+        }
+        else
+        {
+            ToastService.ShowError("خطا در ذخیره‌سازی اطلاعات. لطفاً دوباره تلاش کنید.");
+        }
     }
 }

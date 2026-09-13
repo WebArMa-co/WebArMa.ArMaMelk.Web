@@ -1,4 +1,7 @@
-﻿<div class="h-full flex flex-col p-5 bg-transparent relative z-10">
+﻿@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="h-full flex flex-col p-5 bg-transparent relative z-10">
 
     <!-- Logo Area -->
     <div class="flex items-center gap-4 px-2 mb-8 mt-2 shrink-0">
@@ -50,6 +53,20 @@
 
     <!-- Bottom Section -->
     <div class="mt-4 pt-4 border-t border-white/15 shrink-0">
+        <!-- Bottom Section -->
+     
+
+            <!-- کارت اطلاعات کاربر -->
+            <div class="flex items-center gap-3 px-4 py-3 mb-2 rounded-2xl bg-white/10">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold shrink-0">
+                    @userInitials
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-white truncate">@userName</p>
+                    <p class="text-xs text-white/60 truncate">@userSubtitle</p>
+                </div>
+            </div>
+      
         <NavLink href="/profile"
                  class="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-white/70 border border-transparent hover:bg-white/10 hover:text-white active:scale-[0.98] transition-all duration-200
             [&.active]:bg-white/20 [&.active]:border-white/30 [&.active]:backdrop-blur-sm [&.active]:text-white [&.active]:font-bold [&.active]:shadow-lg [&.active]:shadow-black/10">
@@ -58,3 +75,46 @@
         </NavLink>
     </div>
 </div>
+
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private string userName = "کاربر";
+    private string userInitials = "?";
+    private string userSubtitle = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is null)
+            return;
+
+        var authState = await AuthState;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var givenName = user.FindFirst("given_name")?.Value;
+            var familyName = user.FindFirst("family_name")?.Value;
+            var phone = user.FindFirst("phone_number")?.Value;
+
+            var fullName = string.Join(" ", new[] { givenName, familyName }
+                .Where(n => !string.IsNullOrWhiteSpace(n) && n != phone));
+
+            userName = !string.IsNullOrWhiteSpace(fullName) ? fullName : (phone ?? "کاربر");
+            userSubtitle = phone ?? "";
+            userInitials = GetInitials(userName);
+        }
+    }
+
+    private static string GetInitials(string fullName)
+    {
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "?";
+        if (parts.Length == 1)
+            return parts[0].Length >= 2 ? parts[0][..2] : parts[0][..1];
+        return $"{parts[0][..1]}.{parts[^1][..1]}";
+    }
+}

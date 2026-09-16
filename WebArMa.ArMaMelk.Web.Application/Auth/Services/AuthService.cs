@@ -24,4 +24,9 @@ public class AuthService(HttpClient httpClient) : IAuthService
         var token = await response.Content.ReadFromJsonAsync<TokenDTO>(cancellationToken);
         return token;
     }
+	public async Task LogoutAsync(bool terminateAllSessions, CancellationToken cancellationToken = default)
+	{
+		var request = new { TerminateAllSessions = terminateAllSessions };
+		await httpClient.PostAsJsonAsync("api/v1/Auth/Logout", request, cancellationToken);
+	}
 }

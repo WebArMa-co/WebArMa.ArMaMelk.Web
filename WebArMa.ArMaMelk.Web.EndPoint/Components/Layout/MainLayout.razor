@@ -176,7 +176,7 @@
     private void Logout()
     {
         CloseProfileMenu();
-        Navigation.NavigateTo("/login");
+        Navigation.NavigateTo("/Auth/Logout", forceLoad: true);
     }
 }
 

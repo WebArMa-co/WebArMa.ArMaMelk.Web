@@ -6,4 +6,5 @@ public interface IAuthService
 {
 	Task<TokenDTO?> LoginAsync(string phoneNumber, string code, CancellationToken cancellationToken);
 	Task<TokenDTO?> LoginAsync(CancellationToken cancellationToken);
+	Task LogoutAsync(bool terminateAllSessions, CancellationToken cancellationToken = default);
 }

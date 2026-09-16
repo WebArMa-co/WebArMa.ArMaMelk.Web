@@ -31,7 +31,9 @@ builder.Services.AddHttpClient<IOTPService, OTPService>(client =>
 builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
 {
 	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
-});
+})
+	.AddHttpMessageHandler<ApiAuthenticationHandler>();
+
 builder.Services.AddHttpClient<IProfileService, ProfileService>(client =>
 {
 	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
@@ -72,6 +74,13 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapGet("/Auth/Logout", async (HttpContext httpContext, CancellationToken cancellationToken, IAuthService authService) =>
+{
+	await authService.LogoutAsync(terminateAllSessions: false, cancellationToken);
+	await httpContext.SignOutAsync("ArMaMelk");
+	return Results.Redirect("/login");
+});
 
 app.MapPost("/Auth/Login", async ([FromForm] LoginDTO request, HttpContext httpContext, CancellationToken cancellationToken, IAuthService authService) =>
 {

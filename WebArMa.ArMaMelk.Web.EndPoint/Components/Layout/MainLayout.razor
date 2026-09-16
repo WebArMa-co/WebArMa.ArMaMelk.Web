@@ -1,5 +1,6 @@
 ﻿@using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.IdentityModel.JsonWebTokens
 
 
 @inherits LayoutComponentBase
@@ -141,9 +142,9 @@
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            var givenName = user.FindFirst("given_name")?.Value;
-            var familyName = user.FindFirst("family_name")?.Value;
-            var phone = user.FindFirst("phone_number")?.Value;
+            var givenName = user.FindFirst(JwtRegisteredClaimNames.GivenName)?.Value;
+            var familyName = user.FindFirst(JwtRegisteredClaimNames.FamilyName)?.Value;
+            var phone = user.FindFirst(JwtRegisteredClaimNames.PhoneNumber)?.Value;
 
             var fullName = string.Join(" ", new[] { givenName, familyName }
                 .Where(n => !string.IsNullOrWhiteSpace(n) && n != phone));

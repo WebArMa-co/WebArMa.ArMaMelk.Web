@@ -5,8 +5,8 @@ using WebArMa.ArMaMelk.Web.Application._Shared.Helpers;
 using WebArMa.ArMaMelk.Web.Application.Auth.DTOs;
 using WebArMa.ArMaMelk.Web.Application.Auth.Services;
 using WebArMa.ArMaMelk.Web.Application.OTP.Services;
-using WebArMa.ArMaMelk.Web.Application.Profile.Services;
 using WebArMa.ArMaMelk.Web.Application.Toast.Services;
+using WebArMa.ArMaMelk.Web.Application.Users.Services;
 using WebArMa.ArMaMelk.Web.EndPoint.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +34,7 @@ builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
 })
 	.AddHttpMessageHandler<ApiAuthenticationHandler>();
 
-builder.Services.AddHttpClient<IProfileService, ProfileService>(client =>
+builder.Services.AddHttpClient<IUserService, UserService>(client =>
 {
 	client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
 })

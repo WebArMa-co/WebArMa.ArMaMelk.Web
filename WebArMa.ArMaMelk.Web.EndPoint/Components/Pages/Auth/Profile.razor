@@ -1,14 +1,14 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using WebArMa.ArMaMelk.Web.Application.Profile.DTOs
-@using WebArMa.ArMaMelk.Web.Application.Profile.Services
+@using Microsoft.IdentityModel.JsonWebTokens
 @using WebArMa.ArMaMelk.Web.Application.Toast.Services
+@using WebArMa.ArMaMelk.Web.Application.Users.Services
+@using WebArMa.ArMaMelk.Web.Application.Users.ViewModels
 
 @page "/profile"
 
-@inject IProfileService ProfileService
-@inject ToastService ToastService
-@inject ToastService ToastService
-@inject NavigationManager Navigation
+@inject IUserService userService
+@inject ToastService toastService
+@inject NavigationManager navigation
 
 <div class="w-full max-w-3xl mx-auto p-4 md:p-6 pb-36 space-y-6 animate-fade-in">
 
@@ -169,13 +169,13 @@
         if (AuthState is not null)
         {
             var authState = await AuthState;
-            var phone = authState.User.FindFirst("phone_number")?.Value;
+            var phone = authState.User.FindFirst(JwtRegisteredClaimNames.PhoneNumber)?.Value;
             if (!string.IsNullOrWhiteSpace(phone))
                 userProfile.PhoneNumber = phone;
         }
 
         // بقیه اطلاعات پروفایل از سرور خوانده می‌شود
-        var profile = await ProfileService.GetProfileAsync();
+        var profile = await userService.GetUserAsync();
         if (profile is not null)
         {
             userProfile.FullName = profile.FullName;
@@ -186,31 +186,31 @@
 
     private void GoBack()
     {
-        Navigation.NavigateTo("/dashboard");
+        navigation.NavigateTo("/dashboard");
     }
 
     private async Task SaveChanges()
     {
         isSaving = true;
 
-        var request = new UpdateProfileDTO
+        var request = new UpdateUserViewModel
         {
             FullName = userProfile.FullName,
             AgencyName = userProfile.AgencyName,
             Email = userProfile.Email
         };
 
-        var success = await ProfileService.UpdateProfileAsync(request);
+        var success = await userService.UpdateUserAsync(request);
 
         isSaving = false;
 
         if (success)
         {
-            ToastService.ShowSuccess("اطلاعات پروفایل با موفقیت ذخیره شد.");
+            toastService.ShowSuccess("اطلاعات پروفایل با موفقیت ذخیره شد.");
         }
         else
         {
-            ToastService.ShowError("خطا در ذخیره‌سازی اطلاعات. لطفاً دوباره تلاش کنید.");
+            toastService.ShowError("خطا در ذخیره‌سازی اطلاعات. لطفاً دوباره تلاش کنید.");
         }
     }
 }
